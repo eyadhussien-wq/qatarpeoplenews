@@ -29,7 +29,6 @@ const MENU_ITEMS = [
   { id: 'addad', label: 'أضف إعلانك', icon: 'megaphone-outline' as const, url: 'mailto:ads@ahlqatar.com' },
   { id: 'contact', label: 'اتصل بنا', icon: 'call-outline' as const, url: 'mailto:info@ahlqatar.com' },
   { id: 'notif', label: 'ضبط التنبيهات', icon: 'notifications-outline' as const },
-  { id: 'admin', label: 'لوحة التحكم', icon: 'settings-outline' as const, route: '/admin' },
 ];
 
 const SOCIAL = [
@@ -136,7 +135,7 @@ export default function DrawerMenu() {
               activeOpacity={0.65}
             >
               <Ionicons name={item.icon} size={19} color="rgba(255,255,255,0.55)" />
-              <Text style={[styles.menuLabel, { fontFamily: 'Inter_500Medium' }]}>
+              <Text style={[styles.menuLabel, { color: '#FFFFFF', fontFamily: 'Inter_500Medium' }]}>
                 {item.label}
               </Text>
             </TouchableOpacity>

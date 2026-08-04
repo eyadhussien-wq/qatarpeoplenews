@@ -1,43 +1,43 @@
 /**
  * Qatar People News — design tokens
- * Primary: dark forest green (#1A4B38), Accent: gold (#C9A020), BG: warm cream (#F5F0E8)
+ * Qatar maroon identity with bright, high-contrast surfaces.
  */
 const colors = {
   light: {
     text: '#1A1A1A',
-    tint: '#1A4B38',
+    tint: '#8A1538',
 
-    background: '#F5F0E8',
+    background: '#F4F6F8',
     foreground: '#1A1A1A',
 
     card: '#FFFFFF',
     cardForeground: '#1A1A1A',
 
-    primary: '#1A4B38',
+    primary: '#8A1538',
     primaryForeground: '#FFFFFF',
-    primaryDark: '#0F2D22',
+    primaryDark: '#64102A',
 
-    secondary: '#E8EDEA',
-    secondaryForeground: '#1A4B38',
+    secondary: '#F0E1E6',
+    secondaryForeground: '#8A1538',
 
-    muted: '#EDE8DF',
+    muted: '#EEF1F4',
     mutedForeground: '#6B7280',
 
-    accent: '#C9A020',
+    accent: '#8A1538',
     accentForeground: '#1A1A1A',
 
     destructive: '#DC2626',
     destructiveForeground: '#FFFFFF',
 
-    border: '#DDD5C5',
-    input: '#E0D5C5',
+    border: '#D9DEE5',
+    input: '#D9DEE5',
 
     gold: '#C9A020',
     goldLight: '#E8C840',
-    maroon: '#6B1A1A',
+    maroon: '#8A1538',
     liveBadge: '#DC2626',
     surface: '#FFFFFF',
-    cream: '#F5F0E8',
+    cream: '#FFFFFF',
   },
   radius: 12,
 };

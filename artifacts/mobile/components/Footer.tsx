@@ -49,7 +49,7 @@ export default function Footer() {
           <View key={link.label} style={styles.linkWrap}>
             {i > 0 && <Text style={[styles.sep, { color: 'rgba(255,255,255,0.25)' }]}>|</Text>}
             <TouchableOpacity onPress={() => open(link.url)}>
-              <Text style={[styles.linkText, { color: 'rgba(255,255,255,0.6)', fontFamily: 'Inter_400Regular' }]}>
+              <Text style={[styles.linkText, { color: '#FFFFFF', fontFamily: 'Inter_400Regular' }]}>
                 {link.label}
               </Text>
             </TouchableOpacity>
@@ -58,7 +58,7 @@ export default function Footer() {
       </View>
 
       {/* Copyright */}
-      <Text style={[styles.copyright, { color: 'rgba(255,255,255,0.38)', fontFamily: 'Inter_400Regular' }]}>
+      <Text style={[styles.copyright, { color: '#FFFFFF', fontFamily: 'Inter_400Regular' }]}>
         جميع الحقوق محفوظة لـ أخبار أهل قطر 2026
       </Text>
     </View>

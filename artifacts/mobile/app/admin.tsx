@@ -22,6 +22,7 @@ import {
   type Channel,
 } from '@/context/AppContext';
 
+const ADMIN_USERNAME = 'admin';
 const ADMIN_PASSWORD = 'admin2026';
 type Section = 'carousel' | 'channels' | 'ads' | 'affiliates';
 
@@ -528,16 +529,18 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const router = useRouter();
   const isWeb = Platform.OS === 'web';
   const topPad = isWeb ? 67 : insets.top;
+  const [username, setUsername] = useState('');
   const [pw, setPw] = useState('');
   const [error, setError] = useState('');
 
-  const login = () => {
-    if (pw === ADMIN_PASSWORD) {
+  const doLogin = () => {
+    if (username.trim().toLowerCase() === ADMIN_USERNAME && pw === ADMIN_PASSWORD) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onLogin();
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError('كلمة المرور غير صحيحة');
+      setError('اسم المستخدم أو كلمة المرور غير صحيحة');
+      setUsername('');
       setPw('');
     }
   };
@@ -555,8 +558,20 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
         </View>
         <Text style={[login.title, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>لوحة التحكم</Text>
         <Text style={[login.sub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-          أدخل كلمة المرور للدخول
+           أدخل اسم المستخدم وكلمة المرور للدخول
         </Text>
+        <TextInput
+          style={[
+            login.input,
+            { borderColor: error ? colors.destructive : colors.border, backgroundColor: colors.card, color: colors.foreground, fontFamily: 'Inter_400Regular' },
+          ]}
+          placeholder="اسم المستخدم"
+          placeholderTextColor={colors.mutedForeground}
+          value={username}
+          onChangeText={v => { setUsername(v); setError(''); }}
+          autoCapitalize="none"
+          textAlign="right"
+        />
         <TextInput
           style={[
             login.input,
@@ -567,13 +582,13 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           secureTextEntry
           value={pw}
           onChangeText={v => { setPw(v); setError(''); }}
-          onSubmitEditing={login}
+          onSubmitEditing={doLogin}
           textAlign="right"
         />
         {error ? (
           <Text style={[login.error, { color: colors.destructive, fontFamily: 'Inter_400Regular' }]}>{error}</Text>
         ) : null}
-        <TouchableOpacity style={[login.loginBtn, { backgroundColor: colors.primary }]} onPress={login} activeOpacity={0.85}>
+        <TouchableOpacity style={[login.loginBtn, { backgroundColor: colors.primary }]} onPress={doLogin} activeOpacity={0.85}>
           <Text style={[login.loginBtnTxt, { fontFamily: 'Inter_700Bold' }]}>دخول</Text>
         </TouchableOpacity>
       </View>

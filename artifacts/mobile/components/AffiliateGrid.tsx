@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
@@ -80,11 +80,11 @@ export default function AffiliateGrid() {
   return (
     <View style={styles.container}>
       <SectionHeader title="عروض وتخفيضات حصرية" />
-      <View style={styles.grid}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.grid}>
         {affiliates.map(p => (
           <ProductCard key={p.id} product={p} />
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -115,16 +115,17 @@ const styles = StyleSheet.create({
   },
   grid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     paddingHorizontal: 12,
     gap: 10,
   },
   card: {
-    width: '47%',
+    width: 146,
+    minHeight: 148,
     borderWidth: 1,
-    padding: 12,
+    padding: 9,
     alignItems: 'flex-end',
-    gap: 8,
+    gap: 5,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -142,8 +143,8 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
   iconBox: {
-    width: 56,
-    height: 56,
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -154,20 +155,20 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   productName: {
-    fontSize: 13,
+    fontSize: 11,
     textAlign: 'right',
     lineHeight: 18,
   },
   price: {
-    fontSize: 15,
+    fontSize: 12,
   },
   buyBtn: {
     width: '100%',
-    paddingVertical: 8,
+    paddingVertical: 6,
     alignItems: 'center',
   },
   buyBtnText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 10,
   },
 });
