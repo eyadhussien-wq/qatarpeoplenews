@@ -60,10 +60,10 @@ interface AppContextType {
 
 // ---- Default data ----
 const DEFAULT_CHANNELS: Channel[] = [
-  { id: '1', name: 'تلفزيون قطر', url: 'https://www.youtube.com/embed/live_stream?channel=UC4p10f63i7iZc8-qU0YVjng', color: '#1A4B38' },
-  { id: '2', name: 'الجزيرة الإخبارية', url: 'https://www.youtube.com/embed/bNyUyrR0PHo?autoplay=1', color: '#1A1A2E' },
-  { id: '3', name: 'قناة الكأس 1', url: 'https://www.alkass.net/alkass/live.aspx?ch=one', color: '#6B1A1A' },
-  { id: '4', name: 'قناة قطر 2', url: 'https://www.alkass.net/alkass/live.aspx?ch=two', color: '#1A3A6B' },
+  { id: '1', name: 'قناة الجزيرة الإخبارية', url: 'https://www.youtube.com/embed/bNyUyrR0PHo?autoplay=1&enablejsapi=1', color: '#1A1A2E' },
+  { id: '2', name: 'تلفزيون قطر', url: 'https://www.youtube.com/embed/d020NL_oFAY?autoplay=1&enablejsapi=1', color: '#1A4B38' },
+  { id: '3', name: 'قناة قطر للقرآن الكريم', url: 'https://www.youtube.com/embed/r2LbAGVxNRg?autoplay=1&enablejsapi=1', color: '#6B1A1A' },
+  { id: '4', name: 'التلفزيون العربي', url: 'https://www.youtube.com/embed/e2RgSa1Wt5o?autoplay=1&enablejsapi=1', color: '#1A3A6B' },
 ];
 
 const DEFAULT_CAROUSEL: CarouselItem[] = [
@@ -71,7 +71,7 @@ const DEFAULT_CAROUSEL: CarouselItem[] = [
     id: '1',
     title: 'الآن: بث مباشر مباراة السد والريان',
     subtitle: 'اضغط للمشاهدة',
-    actionUrl: 'https://www.youtube.com/@alkassTV/streams',
+    actionUrl: 'https://www.youtube.com/embed/bNyUyrR0PHo?autoplay=1&enablejsapi=1',
     bgColor: '#0F2D22',
     imagePath: 'hero-stadium',
   },
@@ -87,7 +87,7 @@ const DEFAULT_CAROUSEL: CarouselItem[] = [
     id: '3',
     title: 'تغطية خاصة: فعاليات سوق واقف في عيد الأضحى',
     subtitle: 'شاهد التغطية الكاملة',
-    actionUrl: 'https://www.youtube.com/@QatarTV/streams',
+    actionUrl: 'https://www.youtube.com/embed/d020NL_oFAY?autoplay=1&enablejsapi=1',
     bgColor: '#2A4A1A',
     imagePath: 'hero-stadium',
   },
@@ -157,8 +157,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 const fresh = DEFAULT_CHANNELS.find(item => item.id === channel.id);
                 // Upgrade the shipped legacy channel links while preserving
                 // any channel edits made from the admin dashboard.
-                const isLegacy = channel.url.includes('youtube.com/@') || channel.url.includes('QatarTV2');
-                return fresh && isLegacy ? { ...channel, url: fresh.url } : channel;
+                const isLegacy = !channel.url.includes('/embed/');
+                return fresh && isLegacy ? { ...fresh } : channel;
               });
               setChannels(migrated);
               if (JSON.stringify(migrated) !== JSON.stringify(parsed)) {

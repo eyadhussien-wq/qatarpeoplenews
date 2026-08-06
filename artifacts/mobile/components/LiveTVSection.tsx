@@ -2,7 +2,6 @@ import React from 'react';
 import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useApp, type Channel } from '@/context/AppContext';
@@ -52,8 +51,9 @@ function PlayerModal({ channel, onClose }: { channel: Channel | null; onClose: (
               {React.createElement('iframe', {
                 src: channel.url,
                 title: channel.name,
-                allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen',
+                allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
                 allowFullScreen: true,
+                sandbox: 'allow-scripts allow-same-origin allow-presentation',
                 frameBorder: '0',
                 style: { width: '100%', height: '100%', border: 0 },
               })}
@@ -61,10 +61,7 @@ function PlayerModal({ channel, onClose }: { channel: Channel | null; onClose: (
           ) : (
             <View style={[styles.nativeFallback, { backgroundColor: colors.primaryDark }]}>
               <Ionicons name="play-circle" size={64} color={colors.gold} />
-              <Text style={styles.nativeFallbackText}>اضغط لفتح البث المباشر</Text>
-              <TouchableOpacity style={[styles.openButton, { backgroundColor: colors.gold }]} onPress={() => WebBrowser.openBrowserAsync(channel.url)}>
-                <Text style={[styles.openButtonText, { color: colors.primaryDark }]}>تشغيل البث</Text>
-              </TouchableOpacity>
+              <Text style={styles.nativeFallbackText}>المشغل المضمّن متاح داخل نسخة الويب</Text>
             </View>
           )}
         </View>
@@ -115,8 +112,6 @@ const styles = StyleSheet.create({
   iframeFrame: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#000' },
   nativeFallback: { aspectRatio: 16 / 9, alignItems: 'center', justifyContent: 'center', gap: 10 },
   nativeFallbackText: { color: '#FFFFFF', fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  openButton: { paddingHorizontal: 22, paddingVertical: 10, borderRadius: 8 },
-  openButtonText: { fontSize: 14, fontFamily: 'Inter_700Bold' },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
