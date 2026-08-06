@@ -108,7 +108,12 @@ export function RadioStreamPlayer({ stationName, streamUrl, webAudioUrl, onClose
         <Text style={styles.stationTitle} numberOfLines={1}>{stationName}</Text>
       </View>
       <View style={styles.controlContainer}>
-        {isLoading ? <ActivityIndicator color="#FFD700" size="small" /> : hasError ? (
+        {isLoading ? <ActivityIndicator color="#FFD700" size="small" /> : hasError && Platform.OS === 'web' ? (
+          <View style={styles.webInfoBadge}>
+            <Ionicons name="phone-portrait-outline" size={16} color="#FFD700" />
+            <Text style={styles.webInfoText}>استمع للبث المباشر عبر تطبيق الجوال</Text>
+          </View>
+        ) : hasError ? (
           <Text style={styles.errorText}>خطأ في جلب البث</Text>
         ) : (
           <TouchableOpacity onPress={() => void togglePlayPause()}>
@@ -170,5 +175,7 @@ const styles = StyleSheet.create({
   closeBtn: { marginRight: 10, padding: 4 },
   stationTitle: { color: '#FFFFFF', fontSize: 15, fontWeight: '600', flexShrink: 1 },
   controlContainer: { justifyContent: 'center', alignItems: 'center' },
+  webInfoBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#3A2D12', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 7, maxWidth: 220 },
+  webInfoText: { color: '#FFE7A3', fontSize: 11, fontWeight: '600', textAlign: 'right', flexShrink: 1 },
   errorText: { color: '#FF6B6B', fontSize: 12 },
 });
