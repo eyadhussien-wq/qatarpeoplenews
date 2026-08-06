@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { Audio, type AVPlaybackStatus } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -31,16 +31,40 @@ export default function RadioSection() {
   const colors = useColors();
   const { radioStations } = useApp();
   const webAudioRef = useRef<HTMLAudioElement | null>(null);
+  const nativeAudioRef = useRef<Audio.Sound | null>(null);
   const [activeStation, setActiveStation] = useState<RadioStation | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [streamError, setStreamError] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+      shouldDuckAndroid: true,
+    }).catch((error) => console.error('[Radio] Unable to configure audio mode', error));
+  }, []);
 
   const stopCurrent = useCallback(async () => {
     if (webAudioRef.current) {
       webAudioRef.current.pause();
       webAudioRef.current.src = '';
       webAudioRef.current = null;
+    }
+    if (nativeAudioRef.current) {
+      const sound = nativeAudioRef.current;
+      nativeAudioRef.current = null;
+      try {
+        await sound.stopAsync();
+      } catch (error) {
+        console.warn('[Radio] Native stop failed', error);
+      }
+      try {
+        await sound.unloadAsync();
+      } catch (error) {
+        console.warn('[Radio] Native unload failed', error);
+      }
     }
     setIsPlaying(false);
     setIsBuffering(false);
@@ -75,8 +99,43 @@ export default function RadioSection() {
         });
         setIsPlaying(true);
     } else {
-      // Mobile playback is handled by the hidden HTML5 audio element below.
-      setIsPlaying(true);
+      const statusUpdate = (status: AVPlaybackStatus) => {
+        if (!status.isLoaded) {
+          if (status.error) {
+            console.warn('[Radio] Mobile Audio.Sound stream unavailable', {
+              station: station.name,
+              url: station.url,
+              error: status.error,
+            });
+            setIsPlaying(false);
+            setIsBuffering(false);
+            setStreamError(true);
+          }
+          return;
+        }
+        setIsBuffering(status.isBuffering);
+        setIsPlaying(status.isPlaying);
+      };
+
+      void (async () => {
+        try {
+          const { sound } = await Audio.Sound.createAsync(
+            { uri: station.url },
+            { shouldPlay: true, volume: 1.0, isMuted: false },
+            statusUpdate,
+          );
+          nativeAudioRef.current = sound;
+        } catch (error) {
+          console.warn('[Radio] Mobile Audio.Sound stream unavailable', {
+            station: station.name,
+            url: station.url,
+            error,
+          });
+          setIsPlaying(false);
+          setIsBuffering(false);
+          setStreamError(true);
+        }
+      })();
     }
   }, [stopCurrent]);
 
@@ -92,9 +151,11 @@ export default function RadioSection() {
         if (Platform.OS === 'web') {
           setIsBuffering(true);
           webAudioRef.current?.play().catch((error) => console.warn('[Radio] Web resume is still pending', error));
+        } else {
+          setIsBuffering(true);
+          await nativeAudioRef.current?.playAsync();
         }
         setIsPlaying(true);
-        setIsBuffering(false);
       } catch (runtimeError) {
         console.warn('[Radio] Stream resume is still pending', runtimeError);
         setIsBuffering(true);
@@ -148,55 +209,6 @@ export default function RadioSection() {
           </TouchableOpacity>
         </View>
       )}
-      {Platform.OS !== 'web' && activeStation && isPlaying && (
-        <View style={styles.hiddenWebView}>
-          <WebView
-            key={activeStation.id}
-            originWhitelist={['*']}
-            allowsInlineMediaPlayback={true}
-            mediaPlaybackRequiresUserAction={false}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            userAgent="Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36"
-            mixedContentMode="always"
-            source={{
-              html: `<!DOCTYPE html>
-<html>
-<head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body><audio id="player" src=${JSON.stringify(activeStation.url)} preload="auto" crossorigin="anonymous"></audio>
-<script>
-  const audio = document.getElementById('player');
-  audio.play().then(() => {
-    window.ReactNativeWebView.postMessage('playing');
-  }).catch(() => {
-    window.ReactNativeWebView.postMessage('error');
-  });
-  audio.onwaiting = () => window.ReactNativeWebView.postMessage('buffering');
-  audio.onplaying = () => window.ReactNativeWebView.postMessage('playing');
-  audio.onerror = () => window.ReactNativeWebView.postMessage('error');
-</script></body></html>`,
-            }}
-            onMessage={(event) => {
-              const message = event.nativeEvent.data;
-              if (message === 'buffering') {
-                setIsBuffering(true);
-              } else if (message === 'playing') {
-                setStreamError(false);
-                setIsBuffering(false);
-                setIsPlaying(true);
-              } else if (message === 'error') {
-                console.warn('[Radio] Mobile HTML5 stream unavailable', {
-                  station: activeStation.name,
-                  url: activeStation.url,
-                });
-                setIsPlaying(false);
-                setIsBuffering(false);
-                setStreamError(true);
-              }
-            }}
-          />
-        </View>
-      )}
     </View>
   );
 }
@@ -219,5 +231,4 @@ const styles = StyleSheet.create({
   liveLabel: { color: '#FFB3B3', fontSize: 10, fontFamily: 'Inter_600SemiBold' },
   playerStation: { color: '#FFFFFF', fontSize: 13, fontFamily: 'Inter_600SemiBold', textAlign: 'right' },
   closePlayer: { padding: 4 },
-  hiddenWebView: { width: 0, height: 0, overflow: 'hidden', position: 'absolute' },
 });
