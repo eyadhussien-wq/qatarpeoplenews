@@ -1,86 +1,37 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Audio, type AVPlaybackStatus } from 'expo-av';
+import React, { useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useApp, type RadioStation } from '@/context/AppContext';
 
-const apiBase = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
-  : '';
-
 function darken(hex: string, n = 30): string {
   const v = parseInt(hex.replace('#', ''), 16);
   return `#${((Math.max(0, (v >> 16) - n) << 16) | (Math.max(0, ((v >> 8) & 0xff) - n) << 8) | Math.max(0, (v & 0xff) - n)).toString(16).padStart(6, '0')}`;
 }
 
-export function RadioStreamPlayer({ stationKey, stationName, directUrl }: { stationKey: RadioStation['key']; stationName: string; directUrl: string }) {
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    let disposed = false;
-    const playRadio = async () => {
-      try {
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: false,
-          staysActiveInBackground: true,
-          playsInSilentModeIOS: true,
-          shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: false,
-        });
-        const streamSource = Platform.OS === 'web'
-          ? `${apiBase}/api/radio-proxy/${stationKey}`
-          : directUrl;
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: streamSource },
-          { shouldPlay: true, progressUpdateIntervalMillis: 1000 },
-          (status: AVPlaybackStatus) => {
-            if (!status.isLoaded) {
-              if (status.error) setError(true);
-              return;
-            }
-            setIsPlaying(status.isPlaying);
-          },
-        );
-        if (disposed) await sound.unloadAsync();
-        else soundRef.current = sound;
-      } catch (playbackError) {
-        console.warn('[Radio] Playback failed', playbackError);
-        setError(true);
-      } finally {
-        if (!disposed) setIsLoading(false);
-      }
-    };
-    void playRadio();
-    return () => {
-      disposed = true;
-      const sound = soundRef.current;
-      soundRef.current = null;
-      if (sound) void sound.unloadAsync();
-    };
-  }, [stationKey]);
-
-  const togglePlayPause = useCallback(async () => {
-    if (!soundRef.current) return;
-    if (isPlaying) await soundRef.current.pauseAsync();
-    else await soundRef.current.playAsync();
-  }, [isPlaying]);
-
+export function RadioStreamPlayer({ stationUrl = 'https://tabie.net/live' }: { stationUrl?: string }) {
   return (
-    <View style={styles.playerBar}>
-      <View style={styles.playerInfo}>
-        <Text style={styles.playerStation}>{stationName}</Text>
-        <Text style={styles.liveLabel}>{error ? 'تعذر الاتصال بالبث' : isLoading ? 'جارٍ الاتصال…' : isPlaying ? '● مباشر الآن' : 'متوقف مؤقتاً'}</Text>
-      </View>
-      {isLoading ? <ActivityIndicator color="#FFD700" /> : (
-        <TouchableOpacity onPress={() => void togglePlayPause()} style={styles.playButton}>
-          <Ionicons name={isPlaying ? 'pause-circle' : 'play-circle'} size={44} color="#FFD700" />
-        </TouchableOpacity>
+    <View style={styles.playerFrame}>
+      {Platform.OS === 'web' ? (
+        <iframe
+          src={stationUrl}
+          style={{ width: '100%', height: '100%', border: 0, borderRadius: 12 }}
+          allow="autoplay; fullscreen; picture-in-picture"
+          title="Tabie Live Stream"
+        />
+      ) : (
+        <WebView
+          source={{ uri: stationUrl }}
+          style={styles.webview}
+          allowsInlineMediaPlayback
+          mediaPlaybackRequiresUserAction={false}
+          javaScriptEnabled
+          domStorageEnabled
+          scalesPageToFit
+        />
       )}
     </View>
   );
@@ -113,7 +64,7 @@ export default function RadioSection() {
       </ScrollView>
       {activeStation && (
         <View style={styles.playerContainer}>
-          <RadioStreamPlayer stationKey={activeStation.key} stationName={activeStation.name} directUrl={activeStation.directUrl} />
+          <RadioStreamPlayer stationUrl={activeStation.url} />
           <TouchableOpacity onPress={() => setActiveStation(null)} style={styles.closePlayer}><Ionicons name="close" size={20} color="#FFFFFF" /></TouchableOpacity>
         </View>
       )}
@@ -132,10 +83,7 @@ const styles = StyleSheet.create({
   stationName: { color: '#FFFFFF', fontSize: 12, textAlign: 'center', lineHeight: 17, fontFamily: 'Inter_600SemiBold' },
   playBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   playerContainer: { marginHorizontal: 12, marginTop: 8, position: 'relative' },
-  playerBar: { minHeight: 78, borderRadius: 12, padding: 12, backgroundColor: '#1A1A1A', flexDirection: 'row', alignItems: 'center', gap: 12 },
-  playerInfo: { flex: 1, alignItems: 'flex-end', gap: 3 },
-  playerStation: { color: '#FFFFFF', fontSize: 14, fontFamily: 'Inter_600SemiBold', textAlign: 'right' },
-  liveLabel: { color: '#FFB3B3', fontSize: 11, textAlign: 'right' },
-  playButton: { padding: 2 },
+  playerFrame: { height: 180, width: '100%', borderRadius: 12, overflow: 'hidden', backgroundColor: '#000', marginVertical: 10 },
+  webview: { flex: 1, backgroundColor: '#000' },
   closePlayer: { position: 'absolute', top: 4, left: 4, padding: 3 },
 });

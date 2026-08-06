@@ -41,7 +41,7 @@ export interface RadioStation {
   id: string;
   name: string;
   key: 'qur' | 'skfm' | 'qr' | 'alrayyanfm';
-  directUrl: string;
+  url: string;
   color: string;
 }
 
@@ -124,12 +124,12 @@ const DEFAULT_AFFILIATES: AffiliateProduct[] = [
   { id: '4', name: 'كيبورد ميكانيكي', price: '199 ريال', buyUrl: 'https://amazon.sa', platform: 'amazon' },
 ];
 
-export const STATIONS_VERSION = 'v19_direct_native_playback';
+export const STATIONS_VERSION = 'v21_tabie_live_official';
 export const DEFAULT_RADIO: RadioStation[] = [
-  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم', key: 'qur', directUrl: 'https://qmcconnect.qa/v1/live/qur/master.m3u8', color: '#1A4B38' },
-  { id: 'sout-al-khaleej', name: 'صوت الخليج', key: 'skfm', directUrl: 'https://qmcconnect.qa/v1/live/skfm/master.m3u8', color: '#6B1A4B' },
-  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', key: 'qr', directUrl: 'https://qmcconnect.qa/v1/live/qr/master.m3u8', color: '#1A3A6B' },
-  { id: 'rayyan', name: 'راديو الريان', key: 'alrayyanfm', directUrl: 'https://qmcconnect.qa/v1/live/alrayyanfm/master.m3u8', color: '#8A1538' },
+  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم', key: 'qur', url: 'https://tabie.net/live', color: '#1A4B38' },
+  { id: 'sout-al-khaleej', name: 'صوت الخليج', key: 'skfm', url: 'https://tabie.net/live', color: '#6B1A4B' },
+  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', key: 'qr', url: 'https://tabie.net/live', color: '#1A3A6B' },
+  { id: 'rayyan', name: 'راديو الريان', key: 'alrayyanfm', url: 'https://tabie.net/live', color: '#8A1538' },
 ];
 
 const KEYS = {
