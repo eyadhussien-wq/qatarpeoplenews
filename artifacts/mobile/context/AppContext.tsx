@@ -60,10 +60,10 @@ interface AppContextType {
 
 // ---- Default data ----
 const DEFAULT_CHANNELS: Channel[] = [
-  { id: '1', name: 'تلفزيون قطر', url: 'https://www.youtube.com/@QatarTV/streams', color: '#1A4B38' },
-  { id: '2', name: 'الجزيرة الإخبارية', url: 'https://www.youtube.com/@AlJazeeraArabic', color: '#1A1A2E' },
-  { id: '3', name: 'قناة الكأس 1', url: 'https://www.youtube.com/@alkassTV', color: '#6B1A1A' },
-  { id: '4', name: 'قناة قطر 2', url: 'https://www.youtube.com/@QatarTV2', color: '#1A3A6B' },
+  { id: '1', name: 'تلفزيون قطر', url: 'https://www.youtube.com/embed/live_stream?channel=UC4p10f63i7iZc8-qU0YVjng', color: '#1A4B38' },
+  { id: '2', name: 'الجزيرة الإخبارية', url: 'https://www.youtube.com/embed/bNyUyrR0PHo?autoplay=1', color: '#1A1A2E' },
+  { id: '3', name: 'قناة الكأس 1', url: 'https://www.alkass.net/alkass/live.aspx?ch=one', color: '#6B1A1A' },
+  { id: '4', name: 'قناة قطر 2', url: 'https://www.alkass.net/alkass/live.aspx?ch=two', color: '#1A3A6B' },
 ];
 
 const DEFAULT_CAROUSEL: CarouselItem[] = [
@@ -152,7 +152,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (!value) continue;
           try {
             const parsed = JSON.parse(value);
-            if (key === KEYS.CHANNELS) setChannels(parsed);
+            if (key === KEYS.CHANNELS) {
+              const migrated = (parsed as Channel[]).map(channel => {
+                const fresh = DEFAULT_CHANNELS.find(item => item.id === channel.id);
+                // Upgrade the shipped legacy channel links while preserving
+                // any channel edits made from the admin dashboard.
+                const isLegacy = channel.url.includes('youtube.com/@') || channel.url.includes('QatarTV2');
+                return fresh && isLegacy ? { ...channel, url: fresh.url } : channel;
+              });
+              setChannels(migrated);
+              if (JSON.stringify(migrated) !== JSON.stringify(parsed)) {
+                AsyncStorage.setItem(KEYS.CHANNELS, JSON.stringify(migrated)).catch(() => {});
+              }
+            }
             else if (key === KEYS.CAROUSEL) setCarousel(parsed);
             else if (key === KEYS.ADS) setAds(parsed);
             else if (key === KEYS.AFFILIATES) setAffiliates(parsed);

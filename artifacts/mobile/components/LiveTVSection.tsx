@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
@@ -32,34 +32,55 @@ function darken(hex: string, n = 20): string {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
-function ChannelCard({ channel }: { channel: Channel }) {
+function PlayerModal({ channel, onClose }: { channel: Channel | null; onClose: () => void }) {
   const colors = useColors();
 
-  const handlePress = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (Platform.OS === 'web') {
-      (window as Window).open(channel.url, '_blank');
-    } else {
-      await WebBrowser.openBrowserAsync(channel.url);
-    }
-  };
+  if (!channel) return null;
 
   return (
-    <TouchableOpacity onPress={handlePress} activeOpacity={0.8} style={styles.card}>
-      <LinearGradient
-        colors={[channel.color, darken(channel.color, 25)]}
-        style={styles.cardGradient}
-      >
-        <View style={[styles.liveBadge, { backgroundColor: colors.liveBadge }]}>
-          <View style={styles.liveDot} />
-          <Text style={[styles.liveText, { fontFamily: 'Inter_700Bold' }]}>LIVE</Text>
+    <Modal visible={!!channel} animationType="fade" transparent onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <View style={[styles.playerModal, { backgroundColor: colors.card }]}>
+          <View style={styles.playerHeader}>
+            <Text style={[styles.playerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>{channel.name}</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityLabel="إغلاق المشغل">
+              <Ionicons name="close" size={24} color={colors.foreground} />
+            </TouchableOpacity>
+          </View>
+          {Platform.OS === 'web' ? (
+            <View style={styles.iframeFrame}>
+              {React.createElement('iframe', {
+                src: channel.url,
+                title: channel.name,
+                allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen',
+                allowFullScreen: true,
+                frameBorder: '0',
+                style: { width: '100%', height: '100%', border: 0 },
+              })}
+            </View>
+          ) : (
+            <View style={[styles.nativeFallback, { backgroundColor: colors.primaryDark }]}>
+              <Ionicons name="play-circle" size={64} color={colors.gold} />
+              <Text style={styles.nativeFallbackText}>اضغط لفتح البث المباشر</Text>
+              <TouchableOpacity style={[styles.openButton, { backgroundColor: colors.gold }]} onPress={() => WebBrowser.openBrowserAsync(channel.url)}>
+                <Text style={[styles.openButtonText, { color: colors.primaryDark }]}>تشغيل البث</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
-        <View style={styles.playCircle}>
-          <Ionicons name="play" size={22} color="#FFFFFF" />
-        </View>
-        <Text style={[styles.channelName, { fontFamily: 'Inter_600SemiBold' }]} numberOfLines={2}>
-          {channel.name}
-        </Text>
+      </View>
+    </Modal>
+  );
+}
+
+function ChannelCard({ channel, onPress }: { channel: Channel; onPress: () => void }) {
+  const colors = useColors();
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.card}>
+      <LinearGradient colors={[channel.color, darken(channel.color, 25)]} style={styles.cardGradient}>
+        <View style={[styles.liveBadge, { backgroundColor: colors.liveBadge }]}><View style={styles.liveDot} /><Text style={[styles.liveText, { fontFamily: 'Inter_700Bold' }]}>LIVE</Text></View>
+        <View style={styles.playCircle}><Ionicons name="play" size={22} color="#FFFFFF" /></View>
+        <Text style={[styles.channelName, { fontFamily: 'Inter_600SemiBold' }]} numberOfLines={2}>{channel.name}</Text>
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -67,15 +88,17 @@ function ChannelCard({ channel }: { channel: Channel }) {
 
 export default function LiveTVSection() {
   const { channels } = useApp();
+  const [selectedChannel, setSelectedChannel] = React.useState<Channel | null>(null);
 
   return (
     <View style={styles.container}>
       <SectionHeader title="شاهد قنواتك المفضلة مباشرة" />
       <View style={styles.grid}>
         {channels.map(ch => (
-          <ChannelCard key={ch.id} channel={ch} />
+          <ChannelCard key={ch.id} channel={ch} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setSelectedChannel(ch); }} />
         ))}
       </View>
+      <PlayerModal channel={selectedChannel} onClose={() => setSelectedChannel(null)} />
     </View>
   );
 }
@@ -84,6 +107,16 @@ const styles = StyleSheet.create({
   container: {
     marginVertical: 4,
   },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.78)', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  playerModal: { width: '100%', maxWidth: 760, borderRadius: 16, overflow: 'hidden', elevation: 12 },
+  playerHeader: { minHeight: 52, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  playerTitle: { fontSize: 16, textAlign: 'right', flex: 1 },
+  closeButton: { padding: 6, marginLeft: 8 },
+  iframeFrame: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#000' },
+  nativeFallback: { aspectRatio: 16 / 9, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  nativeFallbackText: { color: '#FFFFFF', fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  openButton: { paddingHorizontal: 22, paddingVertical: 10, borderRadius: 8 },
+  openButtonText: { fontSize: 14, fontFamily: 'Inter_700Bold' },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
