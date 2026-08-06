@@ -10,20 +10,16 @@ const RADIO_STREAMS: Record<string, string> = {
 
 const RADIO_PROXY_STREAMS: Record<string, string[]> = {
   qur: [
-    "https://qmcconnect.qa/v1/live/qur/master.m3u8",
-    "https://stream.radiojar.com/quran_qatar",
+    "https://qmcconnect.qa/api/StreamServices/qur/master.m3u8",
   ],
   skfm: [
-    "https://qmcconnect.qa/v1/live/skfm/master.m3u8",
-    "https://skfm.out.airtime.pro/skfm_a",
+    "https://qmcconnect.qa/api/StreamServices/skr/master.m3u8",
   ],
   qr: [
-    "https://qmcconnect.qa/v1/live/qr/master.m3u8",
-    "https://stream.radiojar.com/qatar_radio",
+    "https://qmcconnect.qa/api/StreamServices/qr/master.m3u8",
   ],
   alrayyanfm: [
-    "https://qmcconnect.qa/v1/live/alrayyanfm/master.m3u8",
-    "https://stream.zeno.fm/alrayyan",
+    "https://qmcconnect.qa/api/StreamServices/alrayyanfm/master.m3u8",
   ],
 };
 
@@ -65,8 +61,11 @@ radioRouter.get("/radio-proxy/:station", async (req, res) => {
         const baseUrl = new URL(targetUrl);
         const rewrittenPlaylist = playlistText.split("\n").map((line) => {
           const trimmed = line.trim();
-          if (!trimmed || trimmed.startsWith("#") || /^https?:\/\//i.test(trimmed)) return line;
-          try { return new URL(trimmed, baseUrl).toString(); } catch { return line; }
+          if (!trimmed || trimmed.startsWith("#")) return line;
+          try {
+            const assetUrl = new URL(trimmed, baseUrl).toString();
+            return `/api/radio-proxy/${req.params.station}/asset?url=${encodeURIComponent(assetUrl)}`;
+          } catch { return line; }
         }).join("\n");
         res.send(rewrittenPlaylist);
       } else {
@@ -81,6 +80,31 @@ radioRouter.get("/radio-proxy/:station", async (req, res) => {
     }
   }
   res.status(502).send("All stream sources failed");
+});
+
+radioRouter.get("/radio-proxy/:station/asset", async (req, res) => {
+  const assetUrl = typeof req.query.url === "string" ? req.query.url : "";
+  if (!RADIO_PROXY_STREAMS[req.params.station] || !assetUrl.startsWith("https://")) {
+    res.status(400).send("Invalid stream asset");
+    return;
+  }
+  try {
+    const upstream = await fetch(assetUrl, {
+      headers: { "User-Agent": "Mozilla/5.0", Accept: "*/*", Referer: "https://tabie.net/" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!upstream.ok || !upstream.body) {
+      res.status(upstream.status || 502).send("Stream asset unavailable");
+      return;
+    }
+    res.setHeader("Content-Type", upstream.headers.get("content-type") || "video/mp2t");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "no-store");
+    Readable.fromWeb(upstream.body as Parameters<typeof Readable.fromWeb>[0]).pipe(res);
+  } catch {
+    res.status(502).send("Stream asset unavailable");
+  }
 });
 
 radioRouter.get("/radio/stream/:stationId", async (req, res) => {

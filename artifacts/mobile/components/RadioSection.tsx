@@ -1,28 +1,57 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Audio, type AVPlaybackStatus } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useApp, type RadioStation } from '@/context/AppContext';
+import Hls from 'hls.js';
+
+const apiBase = process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : '';
 
 function darken(hex: string, n = 30): string {
   const v = parseInt(hex.replace('#', ''), 16);
   return `#${((Math.max(0, (v >> 16) - n) << 16) | (Math.max(0, ((v >> 8) & 0xff) - n) << 8) | Math.max(0, (v & 0xff) - n)).toString(16).padStart(6, '0')}`;
 }
 
-export function RadioStreamPlayer({ stationName, streamUrl, onClose }: { stationName: string; streamUrl: string; onClose: () => void }) {
+export function RadioStreamPlayer({ stationKey, stationName, streamUrl, onClose }: { stationKey: RadioStation['key']; stationName: string; streamUrl: string; onClose: () => void }) {
   const soundRef = useRef<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const webAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     let disposed = false;
     let soundObject: Audio.Sound | null = null;
     const startAudio = async () => {
       try {
+        if (Platform.OS === 'web') {
+          const audio = new window.Audio();
+          audio.controls = false;
+          audio.autoplay = true;
+          audio.onplaying = () => { setIsPlaying(true); setIsLoading(false); };
+          audio.onpause = () => setIsPlaying(false);
+          audio.onerror = () => { setHasError(true); setIsLoading(false); };
+          webAudioRef.current = audio;
+          const source = `${apiBase}/api/radio-proxy/${stationKey}`;
+          const hls = new Hls();
+          hls.on(Hls.Events.ERROR, (_event, data) => {
+            if (data.fatal) { setHasError(true); setIsLoading(false); }
+          });
+          hls.loadSource(source);
+          hls.attachMedia(audio);
+          try {
+            await audio.play();
+          } catch (playError) {
+            // Browsers may reject autoplay until the user presses play.
+            // The HLS stream is still loaded and can be started from the button.
+            console.info('[Radio] Web autoplay was blocked; waiting for play button', playError);
+            setIsLoading(false);
+          }
+          return () => { hls.destroy(); audio.pause(); audio.src = ''; };
+        }
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: false,
           playsInSilentModeIOS: true,
@@ -55,15 +84,24 @@ export function RadioStreamPlayer({ stationName, streamUrl, onClose }: { station
         }
       }
     };
-    void startAudio();
+    const cleanup = startAudio();
     return () => {
       disposed = true;
       soundRef.current = null;
       if (soundObject) void soundObject.unloadAsync();
+      void cleanup.then((fn) => fn?.());
     };
-  }, [streamUrl]);
+  }, [stationKey, streamUrl]);
 
   const togglePlayPause = useCallback(async () => {
+    if (Platform.OS === 'web') {
+      const audio = webAudioRef.current;
+      if (audio) {
+        if (isPlaying) audio.pause();
+        else void audio.play();
+      }
+      return;
+    }
     const sound = soundRef.current;
     if (!sound) return;
     if (isPlaying) await sound.pauseAsync();
@@ -118,7 +156,7 @@ export default function RadioSection() {
       </ScrollView>
       {activeStation && (
         <View style={styles.playerContainer}>
-          <RadioStreamPlayer stationName={activeStation.name} streamUrl={activeStation.streamUrl} onClose={() => setActiveStation(null)} />
+          <RadioStreamPlayer stationKey={activeStation.key} stationName={activeStation.name} streamUrl={activeStation.streamUrl} onClose={() => setActiveStation(null)} />
         </View>
       )}
     </View>
