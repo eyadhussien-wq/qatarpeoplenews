@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,27 +12,44 @@ function darken(hex: string, n = 30): string {
   return `#${((Math.max(0, (v >> 16) - n) << 16) | (Math.max(0, ((v >> 8) & 0xff) - n) << 8) | Math.max(0, (v & 0xff) - n)).toString(16).padStart(6, '0')}`;
 }
 
-export function RadioStreamPlayer({ streamUrl, colors }: { streamUrl: string; colors: ReturnType<typeof useColors> }) {
+const generateAudioHtml = (hlsUrl: string) => {
+  const safeUrl = JSON.stringify(hlsUrl);
+  return `<!doctype html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+html,body{margin:0;height:100%;background:#1a1a1a;color:#fff;font-family:Arial,sans-serif}
+body{display:flex;align-items:center;padding:0 14px;box-sizing:border-box}
+audio{width:100%;height:48px;accent-color:#d4af37}
+</style></head><body>
+<audio id="player" controls autoplay playsinline></audio>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.16/dist/hls.min.js"></script>
+<script>
+const url=${safeUrl}, audio=document.getElementById('player');
+if(audio.canPlayType('application/vnd.apple.mpegurl')){audio.src=url;audio.play().catch(()=>{});}
+else if(window.Hls&&Hls.isSupported()){const hls=new Hls({enableWorker:true});hls.loadSource(url);hls.attachMedia(audio);hls.on(Hls.Events.MANIFEST_PARSED,()=>audio.play().catch(()=>{}));}
+</script></body></html>`;
+};
+
+export function RadioStreamPlayer({ streamUrl }: { streamUrl: string }) {
+  const htmlContent = generateAudioHtml(streamUrl);
   return (
     <View style={styles.playerContainer}>
       {Platform.OS === 'web' ? (
         <iframe
-          src={streamUrl}
+          srcDoc={htmlContent}
           style={styles.iframe}
-          allow="autoplay; encrypted-media"
+          allow="autoplay"
           title="Radio Player"
         />
       ) : (
         <WebView
-          source={{ uri: streamUrl }}
+          source={{ html: htmlContent, baseUrl: 'https://tabie.net' }}
           style={styles.webview}
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
           javaScriptEnabled
           domStorageEnabled
-          startInLoadingState
-          renderLoading={() => <ActivityIndicator style={styles.loader} size="large" color={colors.gold} />}
-          userAgent="Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+          originWhitelist={['*']}
         />
       )}
     </View>
@@ -80,7 +97,7 @@ export default function RadioSection() {
               <Ionicons name="close" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
-          <RadioStreamPlayer streamUrl={activeStation.url} colors={colors} />
+          <RadioStreamPlayer streamUrl={activeStation.url} />
         </>
       )}
     </View>
@@ -100,8 +117,7 @@ const styles = StyleSheet.create({
   playerHeader: { height: 38, marginHorizontal: 12, marginTop: 8, paddingHorizontal: 10, borderTopLeftRadius: 12, borderTopRightRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   playerStation: { color: '#FFFFFF', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   closePlayer: { padding: 4 },
-  playerContainer: { height: 200, width: '100%', borderRadius: 16, overflow: 'hidden', backgroundColor: '#000000', marginVertical: 12 },
-  webview: { flex: 1 },
+  playerContainer: { height: 90, width: '100%', borderRadius: 12, overflow: 'hidden', backgroundColor: '#1a1a1a', marginVertical: 10 },
+  webview: { flex: 1, backgroundColor: 'transparent' },
   iframe: { width: '100%', height: '100%', borderWidth: 0 },
-  loader: { position: 'absolute', top: '45%', left: '45%' },
 });
