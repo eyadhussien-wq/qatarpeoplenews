@@ -1,0 +1,42 @@
+refactor_deals_hub_luxury_ui
+
+Refactor and elevate the Offers & Coupons Section (DealsSection.tsx) into a luxury, highly-polished, and native-feeling Qatari deals hub. Address all current visual defects, fixing navigation, placeholder images, and date logic.
+
+1. In-App Seamless Navigation (No External App Exit)
+Replace Linking.openURL with WebBrowser.openBrowserAsync(url) using expo-web-browser.
+
+When a user taps "مشاهدة العرض" or "احجز الآن", open the official direct deal link within an in-app overlay browser with a gold title bar and a quick close button (✕), keeping the user inside the application environment.
+
+2. Premium Card Layout & Visual Identity
+Background & Contrast: Maintain the rich deep maroon background (#4A0E17 / #36050C) paired with warm cream cards (#FFFDF9) or polished glassmorphic dark containers so text and badges pop clearly.
+
+High-Resolution Branding: Ensure every deal item has a valid, high-quality image background or store logo (e.g., official MoCI seal, Qatar Airways luxury banner, Visit Qatar tourism visual). Remove all solid blank maroon placeholder blocks.
+
+Gold Verification Seal: Redesign the official badge as a polished gold pill (#D4AF37 / #FFD700) with a checkmark icon: ✓ مُعتمد رسمياً for MoCI and Visit Qatar entries.
+
+3. Real-Time Logic & Accurate Metadata
+Fix Expiration Display: Correct the dynamic date calculation. Do NOT display arbitrary numbers like "512 days". Replace with clean contextual indicators:
+
+For MoCI Price Index: تحديث يومي مباشر
+
+For Supermarkets: متبقي 3 أيام or ينتهي الخميس
+
+For Flight/Hotel Offers: عرض حصري محدود
+
+One-Tap Coupon Action: Keep the expo-clipboard integration for "نسخ الكود", showing an elegant top toast message (تم نسخ رمز الخصم بنجاح).
+
+4. Updated Official Data Structure (AppContext.tsx)
+Update DEFAULT_DEALS_DATA to use accurate direct endpoints:
+
+Ministry of Commerce & Industry (MoCI): Direct link to daily official price indices and seasonal sales announcements.
+
+Visit Qatar / Qatar Tourism: Direct link to hotel staycations and official festival offers.
+
+Qatar Airways Holidays: Direct link to stopover packages and flight deals.
+
+Hypermarkets (Al Meera / Lulu): Direct links to weekly official promotional catalogs.
+
+5. Verification & Execution
+Test TypeScript with pnpm exec tsc --noEmit.
+
+Restart Expo server and verify that cards render properly with complete images, correct badges, and in-app browser modals on touch.
