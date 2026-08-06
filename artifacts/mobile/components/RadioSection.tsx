@@ -71,11 +71,11 @@ export default function RadioSection() {
     setStreamError(false);
   }, []);
 
-  const playStation = useCallback((station: RadioStation) => {
+  const playStation = useCallback(async (station: RadioStation) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setStreamError(false);
     setIsBuffering(true);
-    void stopCurrent();
+    await stopCurrent();
     setActiveStation(station);
     if (Platform.OS === 'web') {
         const audio = new globalThis.Audio(station.url);
@@ -99,43 +99,38 @@ export default function RadioSection() {
         });
         setIsPlaying(true);
     } else {
-      const statusUpdate = (status: AVPlaybackStatus) => {
-        if (!status.isLoaded) {
-          if (status.error) {
-            console.warn('[Radio] Mobile Audio.Sound stream unavailable', {
-              station: station.name,
-              url: station.url,
-              error: status.error,
-            });
-            setIsPlaying(false);
-            setIsBuffering(false);
-            setStreamError(true);
-          }
-          return;
-        }
-        setIsBuffering(status.isBuffering);
-        setIsPlaying(status.isPlaying);
-      };
-
-      void (async () => {
-        try {
-          const { sound } = await Audio.Sound.createAsync(
-            { uri: station.url },
-            { shouldPlay: true, volume: 1.0, isMuted: false },
-            statusUpdate,
-          );
-          nativeAudioRef.current = sound;
-        } catch (error) {
-          console.warn('[Radio] Mobile Audio.Sound stream unavailable', {
-            station: station.name,
-            url: station.url,
-            error,
-          });
-          setIsPlaying(false);
-          setIsBuffering(false);
-          setStreamError(true);
-        }
-      })();
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          {
+            uri: station.url,
+            overrideExtension: 'mp3',
+          } as Parameters<typeof Audio.Sound.createAsync>[0],
+          {
+            shouldPlay: true,
+            volume: 1.0,
+            isMuted: false,
+            downloadFirst: false,
+          } as Parameters<typeof Audio.Sound.createAsync>[1],
+          (status: AVPlaybackStatus) => {
+            if (!status.isLoaded) {
+              if (status.error) {
+                setIsPlaying(false);
+                setIsBuffering(false);
+                setStreamError(true);
+              }
+              return;
+            }
+            setIsBuffering(status.isBuffering);
+            setIsPlaying(status.isPlaying);
+          },
+        );
+        nativeAudioRef.current = sound;
+      } catch (error) {
+        console.warn('[Radio] Mobile stream failed:', error);
+        setIsPlaying(false);
+        setIsBuffering(false);
+        setStreamError(true);
+      }
     }
   }, [stopCurrent]);
 
