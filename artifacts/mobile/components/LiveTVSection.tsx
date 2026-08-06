@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { WebView } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useApp, type Channel } from '@/context/AppContext';
@@ -59,9 +60,17 @@ function PlayerModal({ channel, onClose }: { channel: Channel | null; onClose: (
               })}
             </View>
           ) : (
-            <View style={[styles.nativeFallback, { backgroundColor: colors.primaryDark }]}>
-              <Ionicons name="play-circle" size={64} color={colors.gold} />
-              <Text style={styles.nativeFallbackText}>المشغل المضمّن متاح داخل نسخة الويب</Text>
+            <View style={styles.iframeFrame}>
+              <WebView
+                source={{ uri: channel.url }}
+                style={styles.nativeWebView}
+                javaScriptEnabled
+                allowsInlineMediaPlayback
+                mediaPlaybackRequiresUserAction={false}
+                allowsFullscreenVideo
+                startInLoadingState
+                originWhitelist={['*']}
+              />
             </View>
           )}
         </View>
@@ -110,8 +119,7 @@ const styles = StyleSheet.create({
   playerTitle: { fontSize: 16, textAlign: 'right', flex: 1 },
   closeButton: { padding: 6, marginLeft: 8 },
   iframeFrame: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#000' },
-  nativeFallback: { aspectRatio: 16 / 9, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  nativeFallbackText: { color: '#FFFFFF', fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  nativeWebView: { flex: 1, backgroundColor: '#000000' },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
