@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Audio, type AVPlaybackStatus } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -89,6 +89,7 @@ export default function RadioSection() {
           setIsBuffering(false);
           setIsPlaying(false);
           setStreamError(true);
+            Alert.alert('تعذر تشغيل المحطة', 'المحطة غير متاحة حالياً. جرّب محطة أخرى.');
         });
         webAudioRef.current = audio;
         audio.play().catch((error) => {
@@ -117,6 +118,7 @@ export default function RadioSection() {
                 setIsPlaying(false);
                 setIsBuffering(false);
                 setStreamError(true);
+                Alert.alert('تعذر تشغيل المحطة', 'المحطة غير متاحة حالياً. جرّب محطة أخرى.');
               }
               return;
             }
@@ -130,6 +132,7 @@ export default function RadioSection() {
         setIsPlaying(false);
         setIsBuffering(false);
         setStreamError(true);
+        Alert.alert('تعذر تشغيل المحطة', 'المحطة غير متاحة حالياً. جرّب محطة أخرى.');
       }
     }
   }, [stopCurrent]);

@@ -123,6 +123,7 @@ const DEFAULT_AFFILIATES: AffiliateProduct[] = [
   { id: '4', name: 'كيبورد ميكانيكي', price: '199 ريال', buyUrl: 'https://amazon.sa', platform: 'amazon' },
 ];
 
+export const STATIONS_VERSION = 'v3_unique_streams';
 export const DEFAULT_RADIO: RadioStation[] = [
   { id: 'quran-qatar', name: 'إذاعة القرآن الكريم', url: 'https://backup.quranalkarim.com:8443/quran', color: '#1A4B38' },
   { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', url: 'https://stream.zeno.fm/f3wvbbqmdg8uv', color: '#1A3A6B' },
@@ -138,6 +139,7 @@ const KEYS = {
   RADIO_LEGACY: '@ahl_qatar_radio_v1',
   RADIO_LEGACY_ALT: '@ahl_qatar_radio',
   RADIO_STATIONS: 'radio_stations',
+  RADIO_STATIONS_VERSION: 'STATIONS_VERSION',
   RADIO_ENDPOINTS_VERSION: '@ahl_qatar_radio_endpoints_v2',
 } as const;
 
@@ -154,14 +156,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Radio stations are shipped defaults, not user-editable data. Remove
     // legacy persisted copies so old failed URLs cannot be reused by clients.
     void (async () => {
-      await AsyncStorage.multiRemove([
-        KEYS.RADIO_STATIONS,
-        KEYS.RADIO_LEGACY,
-        KEYS.RADIO_LEGACY_ALT,
-      ]);
-      // Keep radio endpoints controlled by the shipped defaults. This prevents
-      // a previously cached custom-port URL from being retried on native.
-      await AsyncStorage.setItem(KEYS.RADIO_ENDPOINTS_VERSION, 'standard-https-v2');
+      const savedStationVersion = await AsyncStorage.getItem(KEYS.RADIO_STATIONS_VERSION);
+      if (savedStationVersion !== STATIONS_VERSION) {
+        await AsyncStorage.multiSet([
+          [KEYS.RADIO_STATIONS, JSON.stringify(DEFAULT_RADIO)],
+          [KEYS.RADIO_STATIONS_VERSION, STATIONS_VERSION],
+          [KEYS.RADIO_ENDPOINTS_VERSION, STATIONS_VERSION],
+        ]);
+        await AsyncStorage.multiRemove([
+          KEYS.RADIO_LEGACY,
+          KEYS.RADIO_LEGACY_ALT,
+        ]);
+      }
     })().catch(() => {});
     AsyncStorage.multiGet([KEYS.CHANNELS, KEYS.CAROUSEL, KEYS.ADS, KEYS.AFFILIATES])
       .then(pairs => {
