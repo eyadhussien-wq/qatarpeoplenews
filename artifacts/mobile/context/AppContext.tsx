@@ -41,7 +41,7 @@ export interface RadioStation {
   id: string;
   name: string;
   key: 'qur' | 'skfm' | 'qr' | 'alrayyanfm';
-  url: string;
+  streamUrl: string;
   color: string;
 }
 
@@ -124,12 +124,12 @@ const DEFAULT_AFFILIATES: AffiliateProduct[] = [
   { id: '4', name: 'كيبورد ميكانيكي', price: '199 ريال', buyUrl: 'https://amazon.sa', platform: 'amazon' },
 ];
 
-export const STATIONS_VERSION = 'v21_tabie_live_official';
+export const STATIONS_VERSION = 'v22_pure_audio_streams';
 export const DEFAULT_RADIO: RadioStation[] = [
-  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم', key: 'qur', url: 'https://tabie.net/live', color: '#1A4B38' },
-  { id: 'sout-al-khaleej', name: 'صوت الخليج', key: 'skfm', url: 'https://tabie.net/live', color: '#6B1A4B' },
-  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', key: 'qr', url: 'https://tabie.net/live', color: '#1A3A6B' },
-  { id: 'rayyan', name: 'راديو الريان', key: 'alrayyanfm', url: 'https://tabie.net/live', color: '#8A1538' },
+  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم', key: 'qur', streamUrl: 'https://stream.radiojar.com/quran_qatar', color: '#1A4B38' },
+  { id: 'sout-al-khaleej', name: 'صوت الخليج', key: 'skfm', streamUrl: 'https://skfm.out.airtime.pro/skfm_a', color: '#6B1A4B' },
+  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', key: 'qr', streamUrl: 'https://stream.radiojar.com/qatar_radio', color: '#1A3A6B' },
+  { id: 'rayyan', name: 'راديو الريان', key: 'alrayyanfm', streamUrl: 'https://stream.zeno.fm/alrayyan', color: '#8A1538' },
 ];
 
 const KEYS = {
