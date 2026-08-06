@@ -6,16 +6,13 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useApp, type RadioStation } from '@/context/AppContext';
-import Hls from 'hls.js';
-
-const apiBase = process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : '';
 
 function darken(hex: string, n = 30): string {
   const v = parseInt(hex.replace('#', ''), 16);
   return `#${((Math.max(0, (v >> 16) - n) << 16) | (Math.max(0, ((v >> 8) & 0xff) - n) << 8) | Math.max(0, (v & 0xff) - n)).toString(16).padStart(6, '0')}`;
 }
 
-export function RadioStreamPlayer({ stationKey, stationName, streamUrl, onClose }: { stationKey: RadioStation['key']; stationName: string; streamUrl: string; onClose: () => void }) {
+export function RadioStreamPlayer({ stationName, streamUrl, webAudioUrl, onClose }: { stationName: string; streamUrl: string; webAudioUrl: string; onClose: () => void }) {
   const soundRef = useRef<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,13 +32,7 @@ export function RadioStreamPlayer({ stationKey, stationName, streamUrl, onClose 
           audio.onpause = () => setIsPlaying(false);
           audio.onerror = () => { setHasError(true); setIsLoading(false); };
           webAudioRef.current = audio;
-          const source = `${apiBase}/api/radio-proxy/${stationKey}`;
-          const hls = new Hls();
-          hls.on(Hls.Events.ERROR, (_event, data) => {
-            if (data.fatal) { setHasError(true); setIsLoading(false); }
-          });
-          hls.loadSource(source);
-          hls.attachMedia(audio);
+          audio.src = webAudioUrl;
           try {
             await audio.play();
           } catch (playError) {
@@ -50,7 +41,7 @@ export function RadioStreamPlayer({ stationKey, stationName, streamUrl, onClose 
             console.info('[Radio] Web autoplay was blocked; waiting for play button', playError);
             setIsLoading(false);
           }
-          return () => { hls.destroy(); audio.pause(); audio.src = ''; };
+          return () => { audio.pause(); audio.src = ''; };
         }
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: false,
@@ -91,7 +82,7 @@ export function RadioStreamPlayer({ stationKey, stationName, streamUrl, onClose 
       if (soundObject) void soundObject.unloadAsync();
       void cleanup.then((fn) => fn?.());
     };
-  }, [stationKey, streamUrl]);
+  }, [streamUrl, webAudioUrl]);
 
   const togglePlayPause = useCallback(async () => {
     if (Platform.OS === 'web') {
@@ -156,7 +147,7 @@ export default function RadioSection() {
       </ScrollView>
       {activeStation && (
         <View style={styles.playerContainer}>
-          <RadioStreamPlayer stationKey={activeStation.key} stationName={activeStation.name} streamUrl={activeStation.streamUrl} onClose={() => setActiveStation(null)} />
+          <RadioStreamPlayer stationName={activeStation.name} streamUrl={activeStation.streamUrl} webAudioUrl={activeStation.webAudioUrl} onClose={() => setActiveStation(null)} />
         </View>
       )}
     </View>
