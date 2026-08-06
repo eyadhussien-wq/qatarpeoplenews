@@ -124,11 +124,10 @@ const DEFAULT_AFFILIATES: AffiliateProduct[] = [
 ];
 
 export const DEFAULT_RADIO: RadioStation[] = [
-  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم (الدوحة)', url: 'https://stream.radiojar.com/8s4s0snqh3duv.mp3', color: '#1A4B38' },
-  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', url: 'https://live.qbs.qa/qatar-radio', color: '#1A3A6B' },
-  { id: 'sout-al-khaleej', name: 'صوت الخليج', url: 'https://stream.skfm.qa/listen', color: '#6B1A4B' },
-  { id: 'rayyan', name: 'راديو الريان', url: 'https://stream.zeno.fm/0388y681bf9uv.mp3', color: '#8A1538' },
-  { id: 'test-bbc-arabic', name: 'اختبار بث مباشر', url: 'https://stream.zeno.fm/f3wvbbqmdg8uv', color: '#345A8A' },
+  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم (الدوحة)', url: 'https://stream.zeno.fm/463g1g322p8uv', color: '#1A4B38' },
+  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', url: 'https://stream.zeno.fm/v9u124r4v78uv', color: '#1A3A6B' },
+  { id: 'sout-al-khaleej', name: 'صوت الخليج', url: 'https://skfm.ice.infomaniak.ch/skfm-128.mp3', color: '#6B1A4B' },
+  { id: 'rayyan', name: 'راديو الريان', url: 'https://stream.zeno.fm/f3wvbbqmdg8uv', color: '#8A1538' },
 ];
 
 const KEYS = {
