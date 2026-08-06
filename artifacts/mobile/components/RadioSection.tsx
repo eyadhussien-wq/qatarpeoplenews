@@ -98,15 +98,10 @@ export default function RadioSection() {
         const { sound } = await Audio.Sound.createAsync(
           {
             uri: station.url,
-            overrideExtension: station.url.includes('.m3u8') ? 'm3u8' : 'mp3',
           } as Parameters<typeof Audio.Sound.createAsync>[0],
           {
             shouldPlay: true,
             progressUpdateIntervalMillis: 1000,
-            shouldCorrectPitch: false,
-            volume: 1,
-            isMuted: false,
-            downloadFirst: false,
           } as Parameters<typeof Audio.Sound.createAsync>[1],
           (status: AVPlaybackStatus) => {
             if (!status.isLoaded) {
