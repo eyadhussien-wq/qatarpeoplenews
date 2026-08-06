@@ -34,6 +34,7 @@ export default function RadioSection() {
   const [activeStation, setActiveStation] = useState<RadioStation | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [streamError, setStreamError] = useState(false);
 
   const stopCurrent = useCallback(async () => {
     if (webAudioRef.current) {
@@ -43,11 +44,13 @@ export default function RadioSection() {
     }
     setIsPlaying(false);
     setIsBuffering(false);
+    setStreamError(false);
   }, []);
 
   const playStation = useCallback((station: RadioStation) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsBuffering(true);
+    setStreamError(false);
     void stopCurrent();
     setActiveStation(station);
     if (Platform.OS === 'web') {
@@ -58,15 +61,17 @@ export default function RadioSection() {
         audio.addEventListener('canplay', () => setIsBuffering(false));
         audio.addEventListener('waiting', () => setIsBuffering(true));
         audio.addEventListener('error', () => {
-          console.error('[Radio] Web stream error', { station: station.name, url: station.url, error: audio.error });
+          console.warn('[Radio] Web stream unavailable', { station: station.name, url: station.url, error: audio.error });
           setIsBuffering(false);
           setIsPlaying(false);
+          setStreamError(true);
         });
         webAudioRef.current = audio;
         audio.play().catch((error) => {
           console.warn('[Radio] Web stream is not ready yet', { station: station.name, url: station.url, error });
           setIsBuffering(false);
           setIsPlaying(false);
+          setStreamError(true);
         });
         setIsPlaying(true);
     } else {
@@ -103,8 +108,10 @@ export default function RadioSection() {
       setIsBuffering(false);
       setIsPlaying(status.isPlaying);
     } else if (status.error) {
-      console.error('[Radio] Radio Error:', status.error);
+      console.warn('[Radio] Radio stream unavailable:', status.error);
+      setIsPlaying(false);
       setIsBuffering(false);
+      setStreamError(true);
     }
   };
 
@@ -140,8 +147,12 @@ export default function RadioSection() {
             <Ionicons name={isPlaying ? 'pause' : 'play'} size={16} color={colors.primaryDark} />
           </TouchableOpacity>
           <View style={styles.playerInfo}>
-            <Text style={styles.liveLabel}>{isBuffering ? '◌ جارٍ التحميل…' : '● مباشر الآن'}</Text>
-            <Text style={styles.playerStation} numberOfLines={1}>{activeStation.name}</Text>
+            <Text style={styles.liveLabel}>
+              {isBuffering ? '◌ جارٍ التحميل…' : streamError ? 'المحطة غير متاحة حالياً' : '● مباشر الآن'}
+            </Text>
+            <Text style={styles.playerStation} numberOfLines={1}>
+              {streamError ? 'جرّب محطة أخرى' : activeStation.name}
+            </Text>
           </View>
           <TouchableOpacity onPress={() => { void stopCurrent(); setActiveStation(null); }} style={styles.closePlayer}>
             <Ionicons name="close" size={20} color="#FFFFFF" />
