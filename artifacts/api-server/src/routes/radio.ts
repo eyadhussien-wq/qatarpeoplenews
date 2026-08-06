@@ -2,8 +2,8 @@ import { Router } from "express";
 import { Readable } from "node:stream";
 
 const RADIO_STREAMS: Record<string, string> = {
-  "quran-qatar": "https://stream.radiojar.com/8s4s0snqh3duv.mp3",
-  "sout-al-khaleej": "https://radio.garden/api/ara/content/listen/4q3cuwiv/channel.mp3",
+  "quran-qatar": "https://backup.quranalkarim.com:8443/quran",
+  "sout-al-khaleej": "https://skr.out.airtime.pro/skr_a",
   "qatar-radio": "https://stream.zeno.fm/f3wvbbqmdg8uv",
   "rayyan": "https://stream.zeno.fm/0388y681bf9uv",
 };
@@ -21,15 +21,17 @@ radioRouter.get("/radio/stream/:stationId", async (req, res) => {
   try {
     upstream = await fetch(targetUrl, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; AhlQatarRadio/1.0)",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         Accept: "*/*",
+        "Icy-MetaData": "1",
       },
       redirect: "follow",
       signal: AbortSignal.timeout(10000),
     });
 
-    if (!upstream.ok || !upstream.body) {
-      res.status(502).send("Audio Stream Unavailable");
+    if ((!upstream.ok && upstream.status !== 206) || !upstream.body) {
+      console.error(`Upstream failure for ${req.params.stationId}: Status ${upstream.status}`);
+      res.status(502).json({ error: `Upstream station returned ${upstream.status}` });
       return;
     }
 
