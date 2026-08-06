@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Audio } from 'expo-av';
+import { Video, ResizeMode, type AVPlaybackStatus } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -31,18 +31,11 @@ export default function RadioSection() {
   const colors = useColors();
   const { radioStations } = useApp();
   const webAudioRef = useRef<HTMLAudioElement | null>(null);
-  const soundRef = useRef<Audio.Sound | null>(null);
   const [activeStation, setActiveStation] = useState<RadioStation | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
 
   const stopCurrent = useCallback(async () => {
-    const sound = soundRef.current;
-    soundRef.current = null;
-    if (sound) {
-      await sound.stopAsync().catch(() => {});
-      await sound.unloadAsync().catch(() => {});
-    }
     if (webAudioRef.current) {
       webAudioRef.current.pause();
       webAudioRef.current.src = '';
@@ -52,14 +45,12 @@ export default function RadioSection() {
     setIsBuffering(false);
   }, []);
 
-  const playStation = useCallback(async (station: RadioStation) => {
+  const playStation = useCallback((station: RadioStation) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsBuffering(true);
-    // Respond immediately to the tap; cleanup is kept small and explicit.
-    await stopCurrent();
+    void stopCurrent();
     setActiveStation(station);
-    try {
-      if (Platform.OS === 'web') {
+    if (Platform.OS === 'web') {
         const audio = new globalThis.Audio(station.url);
         audio.preload = 'auto';
         audio.addEventListener('playing', () => setIsPlaying(true));
@@ -78,31 +69,8 @@ export default function RadioSection() {
           setIsPlaying(false);
         });
         setIsPlaying(true);
-      } else {
-        const soundObject = new Audio.Sound();
-        soundRef.current = soundObject;
-        soundObject.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded) {
-            setIsBuffering(false);
-            setIsPlaying(status.isPlaying);
-          } else if (status.error) {
-            console.warn('[Radio] Native stream error', {
-              station: station.name,
-              url: station.url,
-              error: status.error,
-            });
-            setIsBuffering(false);
-          }
-        });
-        await soundObject.loadAsync(
-          { uri: station.url },
-          { shouldPlay: true, volume: 1.0, isMuted: false },
-        );
-        setIsBuffering(false);
-      }
-    } catch (runtimeError) {
-      console.warn('[Radio] Stream startup failed', { station: station.name, url: station.url, error: runtimeError });
-      setIsBuffering(false);
+    } else {
+      setIsPlaying(true);
     }
   }, [stopCurrent]);
 
@@ -110,15 +78,14 @@ export default function RadioSection() {
     if (!activeStation) return;
     if (isPlaying) {
       if (Platform.OS === 'web') webAudioRef.current?.pause();
-      else await soundRef.current?.pauseAsync();
+      // The hidden Video is unmounted below when isPlaying becomes false.
+      setIsBuffering(false);
       setIsPlaying(false);
     } else {
       try {
         if (Platform.OS === 'web') {
           setIsBuffering(true);
           webAudioRef.current?.play().catch((error) => console.warn('[Radio] Web resume is still pending', error));
-        } else {
-          await soundRef.current?.playAsync();
         }
         setIsPlaying(true);
         setIsBuffering(false);
@@ -130,6 +97,16 @@ export default function RadioSection() {
   };
 
   useEffect(() => () => { void stopCurrent(); }, [stopCurrent]);
+
+  const handleNativeVideoStatus = (status: AVPlaybackStatus) => {
+    if (status.isLoaded) {
+      setIsBuffering(false);
+      setIsPlaying(status.isPlaying);
+    } else if (status.error) {
+      console.error('[Radio] Radio Error:', status.error);
+      setIsBuffering(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -171,6 +148,19 @@ export default function RadioSection() {
           </TouchableOpacity>
         </View>
       )}
+      {Platform.OS !== 'web' && activeStation && isPlaying && (
+        <Video
+          source={{ uri: activeStation.url }}
+          shouldPlay
+          isLooping={false}
+          volume={1.0}
+          isMuted={false}
+          useNativeControls={false}
+          resizeMode={ResizeMode.CONTAIN}
+          style={styles.hiddenVideo}
+          onPlaybackStatusUpdate={handleNativeVideoStatus}
+        />
+      )}
     </View>
   );
 }
@@ -193,4 +183,5 @@ const styles = StyleSheet.create({
   liveLabel: { color: '#FFB3B3', fontSize: 10, fontFamily: 'Inter_600SemiBold' },
   playerStation: { color: '#FFFFFF', fontSize: 13, fontFamily: 'Inter_600SemiBold', textAlign: 'right' },
   closePlayer: { padding: 4 },
+  hiddenVideo: { width: 0, height: 0, position: 'absolute' },
 });
