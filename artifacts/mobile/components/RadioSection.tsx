@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -59,19 +59,21 @@ export default function RadioSection() {
     setActiveStation(station);
     try {
       if (Platform.OS === 'web') {
-        const audio = document.createElement('audio');
+        const isHls = station.url.includes('.m3u8');
+        const audio = new globalThis.Audio();
         audio.preload = 'none';
         audio.crossOrigin = 'anonymous';
-        audio.setAttribute('type', 'application/vnd.apple.mpegurl');
         audio.addEventListener('playing', () => setIsPlaying(true));
+        audio.addEventListener('canplay', () => console.debug('[Radio] Web stream ready', { station: station.name, url: station.url }));
         audio.addEventListener('pause', () => setIsPlaying(false));
+        audio.addEventListener('waiting', () => console.debug('[Radio] Web stream buffering', { station: station.name, url: station.url }));
         audio.addEventListener('error', () => {
           console.error('[Radio] Web stream error', { station: station.name, url: station.url, error: audio.error });
           setError(true);
           setIsPlaying(false);
         });
         webAudioRef.current = audio;
-        if (station.url.endsWith('.m3u8')) {
+        if (isHls) {
           const HlsModule = await import('hls.js');
           const Hls = HlsModule.default;
           if (Hls.isSupported()) {
@@ -88,17 +90,26 @@ export default function RadioSection() {
             hls.attachMedia(audio);
             hlsRef.current = hls;
           } else {
+            // Safari and some mobile browsers have native HLS support.
             audio.src = station.url;
           }
         } else {
+          // Icecast/MP3/AAC streams must bypass hls.js.
           audio.src = station.url;
         }
         await audio.play();
-        setIsPlaying(true);
       } else {
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          shouldPlayInBackground: true,
+          interruptionMode: 'duckOthers',
+        });
+        player.volume = 1.0;
+        player.muted = false;
         player.replace({ uri: station.url });
+        player.volume = 1.0;
+        player.muted = false;
         player.play();
-        setIsPlaying(true);
       }
     } catch (runtimeError) {
       console.error('[Radio] Failed to load/play stream', {
@@ -118,9 +129,27 @@ export default function RadioSection() {
       else player.pause();
       setIsPlaying(false);
     } else {
-      if (Platform.OS === 'web') await webAudioRef.current?.play();
-      else player.play();
-      setIsPlaying(true);
+      try {
+        if (Platform.OS === 'web') await webAudioRef.current?.play();
+        else {
+          await setAudioModeAsync({
+            playsInSilentMode: true,
+            shouldPlayInBackground: true,
+            interruptionMode: 'duckOthers',
+          });
+          player.volume = 1.0;
+          player.muted = false;
+          player.play();
+        }
+      } catch (runtimeError) {
+        console.error('[Radio] Failed to resume stream', {
+          station: activeStation.name,
+          url: activeStation.url,
+          error: runtimeError,
+        });
+        setError(true);
+        setIsPlaying(false);
+      }
     }
   };
 
