@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as WebBrowser from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,12 +23,49 @@ function metadata(deal: (typeof DEFAULT_DEALS_DATA)[number]) {
   return `ينتهي ${expiry.toLocaleDateString('ar-QA', { weekday: 'long' })}`;
 }
 
+function nativeSchemeForUrl(url: string) {
+  const host = new URL(url).hostname.toLowerCase();
+  if (host.includes('qatarairways')) return 'qatarairways://';
+  if (host.includes('talabat')) return 'talabat://';
+  if (host.includes('almeera')) return 'almeera://';
+  if (host.includes('luluhypermarket')) return 'luluhypermarket://';
+  if (host.includes('carrefour')) return 'carrefour://';
+  return null;
+}
+
 export default function DealsSection() {
   const colors = useColors();
   const { savedDeals, toggleSavedDeal } = useApp();
   const [tab, setTab] = useState<DealCategory | 'all'>('all');
   const [toast, setToast] = useState(false);
   const deals = useMemo(() => DEFAULT_DEALS_DATA.filter(deal => tab === 'all' || deal.category === tab), [tab]);
+  const handleOpenDeal = async (url: string) => {
+    try {
+      const scheme = nativeSchemeForUrl(url);
+      if (scheme && await Linking.canOpenURL(scheme)) {
+        await Linking.openURL(scheme);
+        return;
+      }
+      await WebBrowser.openBrowserAsync(url, {
+        toolbarColor: '#580024',
+        controlsColor: '#FFD700',
+        dismissButtonStyle: 'close',
+        readerMode: false,
+      });
+    } catch (error) {
+      console.error('Failed to open deal browser', error);
+      try {
+        await WebBrowser.openBrowserAsync(url, {
+          toolbarColor: '#580024',
+          controlsColor: '#FFD700',
+          dismissButtonStyle: 'close',
+          readerMode: false,
+        });
+      } catch (fallbackError) {
+        console.error('Failed to open deal fallback browser', fallbackError);
+      }
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -47,7 +84,7 @@ export default function DealsSection() {
           : deal.category === 'official_prices'
             ? require('@/assets/images/hero-stadium.jpg')
             : require('@/assets/images/icon_2.png');
-        return <View key={deal.id} style={styles.card}>
+        return <TouchableOpacity key={deal.id} activeOpacity={0.92} style={styles.card} onPress={() => void handleOpenDeal(deal.dealUrl)}>
           <Image source={localImage} style={styles.image} resizeMode="cover" />
           <View style={styles.imageShade} />
           <View style={styles.cardBody}>
@@ -59,10 +96,10 @@ export default function DealsSection() {
             </View>
             <View style={styles.actions}>
               {deal.code && <TouchableOpacity style={styles.codeButton} onPress={() => { void Clipboard.setStringAsync(deal.code!); setToast(true); setTimeout(() => setToast(false), 2200); }}><Ionicons name="copy-outline" size={14} color="#FFD700" /><Text style={styles.codeText}>{deal.code}</Text></TouchableOpacity>}
-              <TouchableOpacity style={styles.action} onPress={() => void WebBrowser.openBrowserAsync(deal.dealUrl, { toolbarColor: '#FFD700', controlsColor: '#4A0E17', showTitle: true })}><Text style={styles.actionText}>{deal.category === 'travel' ? 'احجز الآن' : 'مشاهدة العرض'}</Text><Ionicons name="arrow-back" size={16} color="#4A0E17" /></TouchableOpacity>
+              <TouchableOpacity style={styles.action} onPress={() => void handleOpenDeal(deal.dealUrl)}><Text style={styles.actionText}>{deal.category === 'travel' ? 'احجز الآن' : 'مشاهدة العرض'}</Text><Ionicons name="arrow-back" size={16} color="#4A0E17" /></TouchableOpacity>
             </View>
           </View>
-        </View>;
+        </TouchableOpacity>;
       })}
       {toast && <TouchableOpacity style={styles.toast} onPress={() => setToast(false)}><Ionicons name="checkmark-circle" size={18} color="#0F2D22" /><Text>تم نسخ الكود بنجاح!</Text></TouchableOpacity>}
     </View>
@@ -77,11 +114,11 @@ const styles = StyleSheet.create({
   tab: { borderWidth: 1, borderColor: '#8B5267', borderRadius: 18, paddingHorizontal: 13, paddingVertical: 8, backgroundColor: '#3A1022' },
   activeTab: { backgroundColor: '#FFD700', borderColor: '#FFD700' },
   tabText: { color: '#F5DCE5', fontSize: 12 }, activeTabText: { color: '#580024', fontWeight: '700' },
-  card: { marginHorizontal: 16, marginBottom: 14, borderRadius: 18, overflow: 'hidden', backgroundColor: '#FFFDF9', flexDirection: 'row', minHeight: 146, elevation: 3 },
-  image: { width: 112, backgroundColor: '#E9D8C4' }, imageShade: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 112, backgroundColor: 'rgba(74,14,23,0.18)' }, cardBody: { flex: 1, padding: 13 }, row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  store: { color: '#8A6420', fontSize: 11, fontWeight: '800' }, title: { color: '#36050C', fontSize: 14, fontWeight: '800', marginTop: 5, textAlign: 'right' },
-  badges: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 7, marginTop: 8 }, verified: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#D4AF37', borderRadius: 12, paddingHorizontal: 7, paddingVertical: 4 }, verifiedText: { color: '#FFF8D6', fontSize: 10, fontWeight: '800' }, expiry: { color: '#80666B', fontSize: 10 }, expired: { color: '#999' },
-  actions: { alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 10 },
+  card: { marginHorizontal: 16, marginVertical: 6, borderRadius: 12, overflow: 'hidden', backgroundColor: '#FFFDF9', flexDirection: 'row', height: 130, maxHeight: 130, padding: 10, elevation: 3 },
+  image: { width: 110, height: 110, borderRadius: 9, backgroundColor: '#E9D8C4' }, imageShade: { position: 'absolute', left: 10, top: 10, width: 110, height: 110, borderRadius: 9, backgroundColor: 'rgba(74,14,23,0.18)' }, cardBody: { flex: 1, paddingHorizontal: 10, paddingVertical: 1, minWidth: 0 }, row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  store: { color: '#8A6420', fontSize: 11, fontWeight: '800' }, title: { color: '#36050C', fontSize: 13, fontWeight: '800', marginTop: 3, textAlign: 'right' },
+  badges: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 7, marginTop: 5 }, verified: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#D4AF37', borderRadius: 12, paddingHorizontal: 7, paddingVertical: 3 }, verifiedText: { color: '#FFF8D6', fontSize: 10, fontWeight: '800' }, expiry: { color: '#80666B', fontSize: 10 }, expired: { color: '#999' },
+  actions: { alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 6 },
   action: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFD700', borderRadius: 9, paddingHorizontal: 10, paddingVertical: 7 }, actionText: { color: '#4A0E17', fontSize: 11, fontWeight: '800' },
   codeButton: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#D4AF37', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6 }, codeText: { color: '#8A6420', fontSize: 11, fontWeight: '800' },
   toast: { position: 'absolute', top: 8, alignSelf: 'center', flexDirection: 'row', gap: 7, backgroundColor: '#FFFDF9', borderWidth: 1, borderColor: '#D4AF37', paddingHorizontal: 14, paddingVertical: 11, borderRadius: 20, elevation: 5 },
