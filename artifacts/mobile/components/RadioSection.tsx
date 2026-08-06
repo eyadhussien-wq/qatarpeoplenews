@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Video, ResizeMode, type AVPlaybackStatus } from 'expo-av';
+import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -75,6 +75,7 @@ export default function RadioSection() {
         });
         setIsPlaying(true);
     } else {
+      // Mobile playback is handled by the hidden HTML5 audio element below.
       setIsPlaying(true);
     }
   }, [stopCurrent]);
@@ -102,18 +103,6 @@ export default function RadioSection() {
   };
 
   useEffect(() => () => { void stopCurrent(); }, [stopCurrent]);
-
-  const handleNativeVideoStatus = (status: AVPlaybackStatus) => {
-    if (status.isLoaded) {
-      setIsBuffering(false);
-      setIsPlaying(status.isPlaying);
-    } else if (status.error) {
-      console.warn('[Radio] Radio stream unavailable:', status.error);
-      setIsPlaying(false);
-      setIsBuffering(false);
-      setStreamError(true);
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -160,17 +149,44 @@ export default function RadioSection() {
         </View>
       )}
       {Platform.OS !== 'web' && activeStation && isPlaying && (
-        <Video
-          source={{ uri: activeStation.url }}
-          shouldPlay
-          isLooping={false}
-          volume={1.0}
-          isMuted={false}
-          useNativeControls={false}
-          resizeMode={ResizeMode.CONTAIN}
-          style={styles.hiddenVideo}
-          onPlaybackStatusUpdate={handleNativeVideoStatus}
-        />
+        <View style={styles.hiddenWebView}>
+          <WebView
+            key={activeStation.id}
+            allowsInlineMediaPlayback
+            mediaPlaybackRequiresUserAction={false}
+            javaScriptEnabled
+            source={{
+              html: `<!DOCTYPE html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body><audio id="radioPlayer" autoplay style="display:none"></audio>
+<script>
+  const audio = document.getElementById('radioPlayer');
+  audio.src = ${JSON.stringify(activeStation.url)};
+  audio.addEventListener('waiting', () => window.ReactNativeWebView.postMessage('buffering'));
+  audio.addEventListener('playing', () => window.ReactNativeWebView.postMessage('playing'));
+  audio.addEventListener('error', () => window.ReactNativeWebView.postMessage('error'));
+  audio.play().catch(() => window.ReactNativeWebView.postMessage('error'));
+</script></body></html>`,
+            }}
+            onMessage={(event) => {
+              const message = event.nativeEvent.data;
+              if (message === 'buffering') {
+                setIsBuffering(true);
+              } else if (message === 'playing') {
+                setIsBuffering(false);
+                setIsPlaying(true);
+              } else if (message === 'error') {
+                console.warn('[Radio] Mobile HTML5 stream unavailable', {
+                  station: activeStation.name,
+                  url: activeStation.url,
+                });
+                setIsPlaying(false);
+                setIsBuffering(false);
+                setStreamError(true);
+              }
+            }}
+          />
+        </View>
       )}
     </View>
   );
@@ -194,5 +210,5 @@ const styles = StyleSheet.create({
   liveLabel: { color: '#FFB3B3', fontSize: 10, fontFamily: 'Inter_600SemiBold' },
   playerStation: { color: '#FFFFFF', fontSize: 13, fontFamily: 'Inter_600SemiBold', textAlign: 'right' },
   closePlayer: { padding: 4 },
-  hiddenVideo: { width: 0, height: 0, position: 'absolute' },
+  hiddenWebView: { width: 0, height: 0, overflow: 'hidden', position: 'absolute' },
 });
