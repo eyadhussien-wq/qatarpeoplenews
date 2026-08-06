@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import { Audio, type AVPlaybackStatus } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -31,17 +31,34 @@ export default function RadioSection() {
   const colors = useColors();
   const { radioStations } = useApp();
   const webAudioRef = useRef<HTMLAudioElement | null>(null);
-  const nativeWebViewRef = useRef<WebView>(null);
+  const nativeAudioRef = useRef<Audio.Sound | null>(null);
   const [activeStation, setActiveStation] = useState<RadioStation | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [streamError, setStreamError] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      staysActiveInBackground: true,
+      playsInSilentModeIOS: true,
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+    }).catch((error) => console.error('[Radio] Unable to configure audio mode', error));
+  }, []);
 
   const stopCurrent = useCallback(async () => {
     if (webAudioRef.current) {
       webAudioRef.current.pause();
       webAudioRef.current.src = '';
       webAudioRef.current = null;
+    }
+    if (nativeAudioRef.current) {
+      const sound = nativeAudioRef.current;
+      nativeAudioRef.current = null;
+      try { await sound.stopAsync(); } catch (error) { console.warn('[Radio] Native stop failed', error); }
+      try { await sound.unloadAsync(); } catch (error) { console.warn('[Radio] Native unload failed', error); }
     }
     setIsPlaying(false);
     setIsBuffering(false);
@@ -76,6 +93,43 @@ export default function RadioSection() {
           setStreamError(true);
         });
         setIsPlaying(true);
+    } else {
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          {
+            uri: station.url,
+            overrideExtension: station.url.includes('.m3u8') ? 'm3u8' : 'mp3',
+          } as Parameters<typeof Audio.Sound.createAsync>[0],
+          {
+            shouldPlay: true,
+            progressUpdateIntervalMillis: 1000,
+            shouldCorrectPitch: false,
+            volume: 1,
+            isMuted: false,
+            downloadFirst: false,
+          } as Parameters<typeof Audio.Sound.createAsync>[1],
+          (status: AVPlaybackStatus) => {
+            if (!status.isLoaded) {
+              if (status.error) {
+                setIsPlaying(false);
+                setIsBuffering(false);
+                setStreamError(true);
+                Alert.alert('تعذر تشغيل المحطة', 'المحطة غير متاحة حالياً. جرّب محطة أخرى.');
+              }
+              return;
+            }
+            setIsBuffering(status.isBuffering);
+            setIsPlaying(status.isPlaying);
+          },
+        );
+        nativeAudioRef.current = sound;
+      } catch (error) {
+        console.warn('[Radio] Mobile stream failed:', error);
+        setIsPlaying(false);
+        setIsBuffering(false);
+        setStreamError(true);
+        Alert.alert('تعذر تشغيل المحطة', 'المحطة غير متاحة حالياً. جرّب محطة أخرى.');
+      }
     }
   }, [stopCurrent]);
 
@@ -83,7 +137,6 @@ export default function RadioSection() {
     if (!activeStation) return;
     if (isPlaying) {
       if (Platform.OS === 'web') webAudioRef.current?.pause();
-      // The hidden Video is unmounted below when isPlaying becomes false.
       setIsBuffering(false);
       setIsPlaying(false);
     } else {
@@ -91,7 +144,10 @@ export default function RadioSection() {
         if (Platform.OS === 'web') {
           setIsBuffering(true);
           webAudioRef.current?.play().catch((error) => console.warn('[Radio] Web resume is still pending', error));
-        } else setIsBuffering(true);
+        } else {
+          setIsBuffering(true);
+          await nativeAudioRef.current?.playAsync();
+        }
         setIsPlaying(true);
       } catch (runtimeError) {
         console.warn('[Radio] Stream resume is still pending', runtimeError);
@@ -101,22 +157,6 @@ export default function RadioSection() {
   };
 
   useEffect(() => () => { void stopCurrent(); }, [stopCurrent]);
-
-  const handleNativeWebViewMessage = (event: WebViewMessageEvent) => {
-    const message = event.nativeEvent.data;
-    if (message === 'playing') {
-      setStreamError(false);
-      setIsBuffering(false);
-      setIsPlaying(true);
-    } else if (message === 'buffering') {
-      setIsBuffering(true);
-    } else if (message === 'error') {
-      setIsPlaying(false);
-      setIsBuffering(false);
-      setStreamError(true);
-      Alert.alert('تعذر تشغيل المحطة', 'المحطة غير متاحة حالياً. جرّب محطة أخرى.');
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -162,30 +202,6 @@ export default function RadioSection() {
           </TouchableOpacity>
         </View>
       )}
-      {Platform.OS !== 'web' && activeStation && isPlaying && (
-        <View style={styles.hiddenWebView}>
-          <WebView
-            ref={nativeWebViewRef}
-            originWhitelist={['*']}
-            source={{
-              html: `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body><audio id="radioPlayer" preload="none" src="${activeStation.url}"></audio>
-<script>
-const audio = document.getElementById('radioPlayer');
-audio.onwaiting = () => window.ReactNativeWebView.postMessage('buffering');
-audio.onplaying = () => window.ReactNativeWebView.postMessage('playing');
-audio.onerror = () => window.ReactNativeWebView.postMessage('error');
-audio.play().then(() => window.ReactNativeWebView.postMessage('playing')).catch(() => window.ReactNativeWebView.postMessage('error'));
-</script></body></html>`,
-            }}
-            allowsInlineMediaPlayback={true}
-            mediaPlaybackRequiresUserAction={false}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            onMessage={handleNativeWebViewMessage}
-          />
-        </View>
-      )}
     </View>
   );
 }
@@ -208,5 +224,4 @@ const styles = StyleSheet.create({
   liveLabel: { color: '#FFB3B3', fontSize: 10, fontFamily: 'Inter_600SemiBold' },
   playerStation: { color: '#FFFFFF', fontSize: 13, fontFamily: 'Inter_600SemiBold', textAlign: 'right' },
   closePlayer: { padding: 4 },
-  hiddenWebView: { height: 1, width: 1, opacity: 0.01, position: 'absolute' },
 });
