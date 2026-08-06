@@ -107,6 +107,7 @@ export default function RadioSection() {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
               Accept: '*/*',
+              'Icy-MetaData': '1',
             },
             overrideExtension: 'mp3',
           } as Parameters<typeof Audio.Sound.createAsync>[0],
@@ -115,6 +116,9 @@ export default function RadioSection() {
             volume: 1.0,
             isMuted: false,
             downloadFirst: false,
+            shouldCorrectPitch: false,
+            progressUpdateIntervalMillis: 1000,
+            androidImplementation: 'SimpleExoPlayer',
           } as Parameters<typeof Audio.Sound.createAsync>[1],
           (status: AVPlaybackStatus) => {
             if (!status.isLoaded) {
