@@ -62,10 +62,16 @@ function PlayerModal({ channel, onClose }: { channel: Channel | null; onClose: (
           ) : (
             <View style={styles.iframeFrame}>
               <WebView
-                source={{ uri: channel.url }}
+                source={{
+                  uri: channel.url,
+                  headers: {
+                    Referer: 'https://www.youtube.com',
+                  },
+                }}
                 style={styles.nativeWebView}
-                javaScriptEnabled
-                allowsInlineMediaPlayback
+                userAgent="Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                javaScriptEnabled={true}
+                allowsInlineMediaPlayback={true}
                 mediaPlaybackRequiresUserAction={false}
                 allowsFullscreenVideo
                 startInLoadingState
