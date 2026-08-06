@@ -35,7 +35,6 @@ export default function RadioSection() {
   const [activeStation, setActiveStation] = useState<RadioStation | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
-  const [error, setError] = useState(false);
 
   const stopCurrent = useCallback(async () => {
     nativeWebViewRef.current?.injectJavaScript(
@@ -52,7 +51,6 @@ export default function RadioSection() {
 
   const playStation = useCallback(async (station: RadioStation) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setError(false);
     setIsBuffering(true);
     // Respond immediately to the tap; cleanup is kept small and explicit.
     await stopCurrent();
@@ -68,14 +66,12 @@ export default function RadioSection() {
         audio.addEventListener('error', () => {
           console.error('[Radio] Web stream error', { station: station.name, url: station.url, error: audio.error });
           setIsBuffering(false);
-          setError(true);
           setIsPlaying(false);
         });
         webAudioRef.current = audio;
         audio.play().catch((error) => {
-          console.error('[Radio] Web Play Error:', { station: station.name, url: station.url, error });
+          console.warn('[Radio] Web stream is not ready yet', { station: station.name, url: station.url, error });
           setIsBuffering(false);
-          setError(true);
           setIsPlaying(false);
         });
         setIsPlaying(true);
@@ -85,14 +81,8 @@ export default function RadioSection() {
         setIsPlaying(true);
       }
     } catch (runtimeError) {
-      console.error('[Radio] Failed to load/play stream', {
-        station: station.name,
-        url: station.url,
-        error: runtimeError,
-      });
-      setError(true);
-      setIsPlaying(false);
-      setIsBuffering(false);
+      console.warn('[Radio] Stream startup is still pending', { station: station.name, url: station.url, error: runtimeError });
+      setIsBuffering(true);
     }
   }, [stopCurrent]);
 
@@ -108,21 +98,13 @@ export default function RadioSection() {
       try {
         if (Platform.OS === 'web') {
           setIsBuffering(true);
-          webAudioRef.current?.play().catch((error) => {
-            console.error('[Radio] Web Play Error:', error);
-            setIsBuffering(false);
-          });
+          webAudioRef.current?.play().catch((error) => console.warn('[Radio] Web resume is still pending', error));
         }
         setIsPlaying(true);
         setIsBuffering(false);
       } catch (runtimeError) {
-        console.error('[Radio] Failed to resume stream', {
-          station: activeStation.name,
-          url: activeStation.url,
-          error: runtimeError,
-        });
-        setError(true);
-        setIsPlaying(false);
+        console.warn('[Radio] Stream resume is still pending', runtimeError);
+        setIsBuffering(true);
       }
     }
   };
@@ -151,14 +133,21 @@ player.play().catch(e=>window.ReactNativeWebView.postMessage('error:'+e.message)
   const handleNativeMessage = (event: WebViewMessageEvent) => {
     const message = event.nativeEvent.data;
     if (message === 'playing' || message === 'ready') {
-      setIsPlaying(true); setIsBuffering(false); setError(false);
+      setIsPlaying(true); setIsBuffering(false);
     } else if (message === 'buffering') {
       setIsBuffering(true);
     } else if (message === 'paused') {
       setIsPlaying(false); setIsBuffering(false);
     } else if (message.startsWith('error')) {
-      console.error('[Radio] WebView stream error', { station: activeStation?.name, url: activeStation?.url, message });
-      setIsPlaying(false); setIsBuffering(false); setError(true);
+      // Browser media engines commonly report an interrupted play() promise
+      // while replacing/stopping a stream. Treat it as a transient state, not
+      // a user-facing station failure.
+      console.warn('[Radio] WebView stream is still loading', {
+        station: activeStation?.name,
+        url: activeStation?.url,
+        message,
+      });
+      setIsBuffering(true);
     }
   };
 
@@ -195,7 +184,7 @@ player.play().catch(e=>window.ReactNativeWebView.postMessage('error:'+e.message)
           </TouchableOpacity>
           <View style={styles.playerInfo}>
             <Text style={styles.liveLabel}>{isBuffering ? '◌ جارٍ التحميل…' : '● مباشر الآن'}</Text>
-            <Text style={styles.playerStation} numberOfLines={1}>{error ? 'تعذر تشغيل المحطة' : activeStation.name}</Text>
+            <Text style={styles.playerStation} numberOfLines={1}>{activeStation.name}</Text>
           </View>
           <TouchableOpacity onPress={() => { void stopCurrent(); setActiveStation(null); }} style={styles.closePlayer}>
             <Ionicons name="close" size={20} color="#FFFFFF" />
