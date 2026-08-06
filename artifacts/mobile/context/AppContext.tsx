@@ -124,12 +124,12 @@ const DEFAULT_AFFILIATES: AffiliateProduct[] = [
   { id: '4', name: 'كيبورد ميكانيكي', price: '199 ريال', buyUrl: 'https://amazon.sa', platform: 'amazon' },
 ];
 
-export const STATIONS_VERSION = 'v23_official_hls_streams';
+export const STATIONS_VERSION = 'v24_tabie_runtime_hls_streams';
 export const DEFAULT_RADIO: RadioStation[] = [
-  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم', key: 'qur', streamUrl: 'https://qmcconnect.qa/v1/live/qur/master.m3u8', color: '#1A4B38' },
-  { id: 'sout-al-khaleej', name: 'صوت الخليج', key: 'skfm', streamUrl: 'https://qmcconnect.qa/v1/live/skfm/master.m3u8', color: '#6B1A4B' },
-  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', key: 'qr', streamUrl: 'https://qmcconnect.qa/v1/live/qr/master.m3u8', color: '#1A3A6B' },
-  { id: 'rayyan', name: 'راديو الريان', key: 'alrayyanfm', streamUrl: 'https://qmcconnect.qa/v1/live/alrayyanfm/master.m3u8', color: '#8A1538' },
+  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم', key: 'qur', streamUrl: 'https://qmcconnect.qa/api/StreamServices/qur/master.m3u8', color: '#1A4B38' },
+  { id: 'sout-al-khaleej', name: 'صوت الخليج', key: 'skfm', streamUrl: 'https://qmcconnect.qa/api/StreamServices/skr/master.m3u8', color: '#6B1A4B' },
+  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', key: 'qr', streamUrl: 'https://qmcconnect.qa/api/StreamServices/qr/master.m3u8', color: '#1A3A6B' },
+  { id: 'rayyan', name: 'راديو الريان', key: 'alrayyanfm', streamUrl: 'https://qmcconnect.qa/api/StreamServices/alrayyanfm/master.m3u8', color: '#8A1538' },
 ];
 
 const KEYS = {
