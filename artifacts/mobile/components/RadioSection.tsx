@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Audio, type AVPlaybackStatus } from 'expo-av';
+import React, { useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -30,128 +30,7 @@ function SectionHeader({ title }: { title: string }) {
 export default function RadioSection() {
   const colors = useColors();
   const { radioStations } = useApp();
-  const webAudioRef = useRef<HTMLAudioElement | null>(null);
-  const nativeAudioRef = useRef<Audio.Sound | null>(null);
   const [activeStation, setActiveStation] = useState<RadioStation | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isBuffering, setIsBuffering] = useState(false);
-  const [streamError, setStreamError] = useState(false);
-
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      staysActiveInBackground: true,
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: true,
-      playThroughEarpieceAndroid: false,
-    }).catch((error) => console.error('[Radio] Unable to configure audio mode', error));
-  }, []);
-
-  const stopCurrent = useCallback(async () => {
-    if (webAudioRef.current) {
-      webAudioRef.current.pause();
-      webAudioRef.current.src = '';
-      webAudioRef.current = null;
-    }
-    if (nativeAudioRef.current) {
-      const sound = nativeAudioRef.current;
-      nativeAudioRef.current = null;
-      try { await sound.stopAsync(); } catch (error) { console.warn('[Radio] Native stop failed', error); }
-      try { await sound.unloadAsync(); } catch (error) { console.warn('[Radio] Native unload failed', error); }
-    }
-    setIsPlaying(false);
-    setIsBuffering(false);
-    setStreamError(false);
-  }, []);
-
-  const playStation = useCallback(async (station: RadioStation) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setStreamError(false);
-    setIsBuffering(true);
-    await stopCurrent();
-    setActiveStation(station);
-    if (Platform.OS === 'web') {
-        const audio = new globalThis.Audio(station.url);
-        audio.preload = 'auto';
-        audio.addEventListener('playing', () => setIsPlaying(true));
-        audio.addEventListener('playing', () => setIsBuffering(false));
-        audio.addEventListener('canplay', () => setIsBuffering(false));
-        audio.addEventListener('waiting', () => setIsBuffering(true));
-        audio.addEventListener('error', () => {
-          console.warn('[Radio] Web stream unavailable', { station: station.name, url: station.url, error: audio.error });
-          setIsBuffering(false);
-          setIsPlaying(false);
-          setStreamError(true);
-            Alert.alert('تعذر تشغيل المحطة', 'المحطة غير متاحة حالياً. جرّب محطة أخرى.');
-        });
-        webAudioRef.current = audio;
-        audio.play().catch((error) => {
-          console.warn('[Radio] Web stream is not ready yet', { station: station.name, url: station.url, error });
-          setIsBuffering(false);
-          setIsPlaying(false);
-          setStreamError(true);
-        });
-        setIsPlaying(true);
-    } else {
-      try {
-        const { sound } = await Audio.Sound.createAsync(
-          {
-            uri: station.url,
-          } as Parameters<typeof Audio.Sound.createAsync>[0],
-          {
-            shouldPlay: true,
-            progressUpdateIntervalMillis: 1000,
-          } as Parameters<typeof Audio.Sound.createAsync>[1],
-          (status: AVPlaybackStatus) => {
-            if (!status.isLoaded) {
-              if (status.error) {
-                setIsPlaying(false);
-                setIsBuffering(false);
-                setStreamError(true);
-                Alert.alert('تعذر تشغيل المحطة', 'المحطة غير متاحة حالياً. جرّب محطة أخرى.');
-              }
-              return;
-            }
-            setIsBuffering(status.isBuffering);
-            setIsPlaying(status.isPlaying);
-          },
-        );
-        nativeAudioRef.current = sound;
-      } catch (error) {
-        console.warn('[Radio] Mobile stream failed:', error);
-        setIsPlaying(false);
-        setIsBuffering(false);
-        setStreamError(true);
-        Alert.alert('تعذر تشغيل المحطة', 'المحطة غير متاحة حالياً. جرّب محطة أخرى.');
-      }
-    }
-  }, [stopCurrent]);
-
-  const togglePlayback = async () => {
-    if (!activeStation) return;
-    if (isPlaying) {
-      if (Platform.OS === 'web') webAudioRef.current?.pause();
-      setIsBuffering(false);
-      setIsPlaying(false);
-    } else {
-      try {
-        if (Platform.OS === 'web') {
-          setIsBuffering(true);
-          webAudioRef.current?.play().catch((error) => console.warn('[Radio] Web resume is still pending', error));
-        } else {
-          setIsBuffering(true);
-          await nativeAudioRef.current?.playAsync();
-        }
-        setIsPlaying(true);
-      } catch (runtimeError) {
-        console.warn('[Radio] Stream resume is still pending', runtimeError);
-        setIsBuffering(true);
-      }
-    }
-  };
-
-  useEffect(() => () => { void stopCurrent(); }, [stopCurrent]);
 
   return (
     <View style={styles.container}>
@@ -162,8 +41,8 @@ export default function RadioSection() {
             key={station.id}
             style={styles.card}
             onPress={() => {
-              if (activeStation?.id === station.id) void togglePlayback();
-              else void playStation(station);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setActiveStation(activeStation?.id === station.id ? null : station);
             }}
             activeOpacity={0.8}
           >
@@ -173,28 +52,31 @@ export default function RadioSection() {
               </View>
               <Text style={styles.stationName} numberOfLines={2}>{station.name}</Text>
               <View style={[styles.playBtn, { backgroundColor: colors.gold }]}>
-                <Ionicons name={activeStation?.id === station.id && isPlaying ? 'pause' : 'play'} size={15} color={colors.primaryDark} />
+                 <Ionicons name={activeStation?.id === station.id ? 'radio' : 'play'} size={15} color={colors.primaryDark} />
               </View>
             </LinearGradient>
           </TouchableOpacity>
         ))}
       </ScrollView>
       {activeStation && (
-        <View style={[styles.playerBar, { backgroundColor: colors.primaryDark }]}>
-          <TouchableOpacity onPress={() => void togglePlayback()} style={[styles.playerButton, { backgroundColor: colors.gold }]}>
-            <Ionicons name={isPlaying ? 'pause' : 'play'} size={16} color={colors.primaryDark} />
-          </TouchableOpacity>
-          <View style={styles.playerInfo}>
-            <Text style={styles.liveLabel}>
-              {isBuffering ? '◌ جارٍ التحميل…' : streamError ? 'المحطة غير متاحة حالياً' : '● مباشر الآن'}
-            </Text>
-            <Text style={styles.playerStation} numberOfLines={1}>
-              {streamError ? 'جرّب محطة أخرى' : activeStation.name}
-            </Text>
+        <View style={styles.playerContainer}>
+          <View style={styles.playerHeader}>
+            <Text style={styles.playerStation}>{activeStation.name}</Text>
+            <TouchableOpacity onPress={() => setActiveStation(null)} style={styles.closePlayer}>
+              <Ionicons name="close" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => { void stopCurrent(); setActiveStation(null); }} style={styles.closePlayer}>
-            <Ionicons name="close" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
+          <WebView
+            source={{ uri: activeStation.url }}
+            style={styles.webview}
+            allowsInlineMediaPlayback
+            mediaPlaybackRequiresUserAction={false}
+            javaScriptEnabled
+            domStorageEnabled
+            startInLoadingState
+            renderLoading={() => <ActivityIndicator style={styles.loader} size="large" color={colors.gold} />}
+            userAgent="Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+          />
         </View>
       )}
     </View>
@@ -213,10 +95,10 @@ const styles = StyleSheet.create({
   iconCircle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   stationName: { color: '#FFFFFF', fontSize: 12, textAlign: 'center', lineHeight: 17, fontFamily: 'Inter_600SemiBold' },
   playBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  playerBar: { marginHorizontal: 12, marginTop: 8, borderRadius: 12, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 8, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8 },
-  playerButton: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  playerInfo: { flex: 1, alignItems: 'flex-end', gap: 2 },
-  liveLabel: { color: '#FFB3B3', fontSize: 10, fontFamily: 'Inter_600SemiBold' },
-  playerStation: { color: '#FFFFFF', fontSize: 13, fontFamily: 'Inter_600SemiBold', textAlign: 'right' },
+  playerContainer: { height: 180, marginHorizontal: 12, marginVertical: 10, borderRadius: 12, overflow: 'hidden', backgroundColor: '#1a1a1a' },
+  playerHeader: { height: 38, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#241018' },
+  playerStation: { color: '#FFFFFF', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   closePlayer: { padding: 4 },
+  webview: { flex: 1, backgroundColor: 'transparent' },
+  loader: { position: 'absolute', top: '40%', left: '45%' },
 });

@@ -123,12 +123,12 @@ const DEFAULT_AFFILIATES: AffiliateProduct[] = [
   { id: '4', name: 'كيبورد ميكانيكي', price: '199 ريال', buyUrl: 'https://amazon.sa', platform: 'amazon' },
 ];
 
-export const STATIONS_VERSION = 'v9_verified_working_streams';
+export const STATIONS_VERSION = 'v11_official_web_players';
 export const DEFAULT_RADIO: RadioStation[] = [
-  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم', url: 'https://stream.quran.com.qa/stream', color: '#1A4B38' },
-  { id: 'sout-al-khaleej', name: 'صوت الخليج', url: 'https://skr.out.airtime.pro/skr_a', color: '#6B1A4B' },
-  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', url: 'https://live.qtv.qa/hls/qatar-radio/index.m3u8', color: '#1A3A6B' },
-  { id: 'rayyan', name: 'راديو الريان', url: 'https://live.qtv.qa/hls/alrayyan-radio/index.m3u8', color: '#8A1538' },
+  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم', url: 'https://qurany.net/live', color: '#1A4B38' },
+  { id: 'sout-al-khaleej', name: 'صوت الخليج', url: 'https://www.soutalkhaleej.fm/live-stream', color: '#6B1A4B' },
+  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', url: 'https://qmc.qa/radio/qatar-radio', color: '#1A3A6B' },
+  { id: 'rayyan', name: 'راديو الريان', url: 'https://alrayyan.tv/radio-live', color: '#8A1538' },
 ];
 
 const KEYS = {
