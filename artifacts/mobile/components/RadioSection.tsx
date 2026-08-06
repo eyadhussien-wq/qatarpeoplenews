@@ -32,9 +32,9 @@ export default function RadioSection() {
   const { radioStations } = useApp();
   const soundRef = useRef<Audio.Sound | null>(null);
   const webAudioRef = useRef<HTMLAudioElement | null>(null);
-  const hlsRef = useRef<{ destroy: () => void } | null>(null);
   const [activeStation, setActiveStation] = useState<RadioStation | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [error, setError] = useState(false);
 
   const stopCurrent = useCallback(async () => {
@@ -52,64 +52,40 @@ export default function RadioSection() {
         console.warn('[Radio] unload cleanup skipped', error);
       }
     }
-    hlsRef.current?.destroy();
-    hlsRef.current = null;
     if (webAudioRef.current) {
       webAudioRef.current.pause();
       webAudioRef.current.src = '';
       webAudioRef.current = null;
     }
     setIsPlaying(false);
+    setIsBuffering(false);
   }, []);
 
   const playStation = useCallback(async (station: RadioStation) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setError(false);
+    setIsBuffering(true);
     // Respond immediately to the tap; cleanup is kept small and explicit.
     await stopCurrent();
     setActiveStation(station);
     try {
       if (Platform.OS === 'web') {
-        const isHls = station.url.includes('.m3u8');
         const audio = new globalThis.Audio(station.url);
-        audio.preload = 'none';
-        audio.crossOrigin = 'anonymous';
+        audio.preload = 'auto';
         audio.addEventListener('playing', () => setIsPlaying(true));
-        audio.addEventListener('canplay', () => console.debug('[Radio] Web stream ready', { station: station.name, url: station.url }));
-        audio.addEventListener('pause', () => setIsPlaying(false));
-        audio.addEventListener('waiting', () => console.debug('[Radio] Web stream buffering', { station: station.name, url: station.url }));
+        audio.addEventListener('playing', () => setIsBuffering(false));
+        audio.addEventListener('canplay', () => setIsBuffering(false));
+        audio.addEventListener('waiting', () => setIsBuffering(true));
         audio.addEventListener('error', () => {
           console.error('[Radio] Web stream error', { station: station.name, url: station.url, error: audio.error });
+          setIsBuffering(false);
           setError(true);
           setIsPlaying(false);
         });
         webAudioRef.current = audio;
-        if (isHls) {
-          const HlsModule = await import('hls.js');
-          const Hls = HlsModule.default;
-          if (Hls.isSupported()) {
-            const hls = new Hls({ enableWorker: true });
-            hls.on(Hls.Events.ERROR, (_event, data) => {
-              console.error('[Radio] HLS error', { station: station.name, url: station.url, data });
-              if (data.fatal) {
-                setError(true);
-                setIsPlaying(false);
-                hls.destroy();
-              }
-            });
-            hls.attachMedia(audio);
-            hlsRef.current = hls;
-            hls.loadSource(station.url);
-          } else {
-            // Safari and some mobile browsers have native HLS support.
-            audio.src = station.url;
-          }
-        } else {
-          // Icecast/MP3/AAC streams must bypass hls.js.
-          audio.src = station.url;
-        }
         audio.play().catch((error) => {
           console.error('[Radio] Web Play Error:', { station: station.name, url: station.url, error });
+          setIsBuffering(false);
           setError(true);
           setIsPlaying(false);
         });
@@ -121,14 +97,19 @@ export default function RadioSection() {
         );
         soundRef.current = sound;
         sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded) setIsPlaying(status.isPlaying);
+          if (status.isLoaded) {
+            setIsPlaying(status.isPlaying);
+            setIsBuffering(status.isBuffering);
+          }
           else if (status.error) {
             console.error('[Radio] Native playback error', { station: station.name, url: station.url, error: status.error });
+            setIsBuffering(false);
             setError(true);
             setIsPlaying(false);
           }
         });
         setIsPlaying(true);
+        setIsBuffering(false);
       }
     } catch (runtimeError) {
       console.error('[Radio] Failed to load/play stream', {
@@ -138,6 +119,7 @@ export default function RadioSection() {
       });
       setError(true);
       setIsPlaying(false);
+      setIsBuffering(false);
     }
   }, [stopCurrent]);
 
@@ -150,11 +132,16 @@ export default function RadioSection() {
     } else {
       try {
         if (Platform.OS === 'web') {
-          webAudioRef.current?.play().catch((error) => console.error('[Radio] Web Play Error:', error));
+          setIsBuffering(true);
+          webAudioRef.current?.play().catch((error) => {
+            console.error('[Radio] Web Play Error:', error);
+            setIsBuffering(false);
+          });
         } else {
           await soundRef.current?.playAsync();
         }
         setIsPlaying(true);
+        setIsBuffering(false);
       } catch (runtimeError) {
         console.error('[Radio] Failed to resume stream', {
           station: activeStation.name,
@@ -201,7 +188,7 @@ export default function RadioSection() {
             <Ionicons name={isPlaying ? 'pause' : 'play'} size={16} color={colors.primaryDark} />
           </TouchableOpacity>
           <View style={styles.playerInfo}>
-            <Text style={styles.liveLabel}>● مباشر الآن</Text>
+            <Text style={styles.liveLabel}>{isBuffering ? '◌ جارٍ التحميل…' : '● مباشر الآن'}</Text>
             <Text style={styles.playerStation} numberOfLines={1}>{error ? 'تعذر تشغيل المحطة' : activeStation.name}</Text>
           </View>
           <TouchableOpacity onPress={() => { void stopCurrent(); setActiveStation(null); }} style={styles.closePlayer}>
