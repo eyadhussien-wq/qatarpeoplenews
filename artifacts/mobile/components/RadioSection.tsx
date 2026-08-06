@@ -16,7 +16,7 @@ function darken(hex: string, n = 30): string {
   return `#${((Math.max(0, (v >> 16) - n) << 16) | (Math.max(0, ((v >> 8) & 0xff) - n) << 8) | Math.max(0, (v & 0xff) - n)).toString(16).padStart(6, '0')}`;
 }
 
-export function RadioStreamPlayer({ stationKey, stationName }: { stationKey: RadioStation['key']; stationName: string }) {
+export function RadioStreamPlayer({ stationKey, stationName, directUrl }: { stationKey: RadioStation['key']; stationName: string; directUrl: string }) {
   const soundRef = useRef<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,9 +33,11 @@ export function RadioStreamPlayer({ stationKey, stationName }: { stationKey: Rad
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
         });
-        const proxyUrl = `${apiBase}/api/radio-proxy/${stationKey}`;
+        const streamSource = Platform.OS === 'web'
+          ? `${apiBase}/api/radio-proxy/${stationKey}`
+          : directUrl;
         const { sound } = await Audio.Sound.createAsync(
-          { uri: proxyUrl },
+          { uri: streamSource },
           { shouldPlay: true, progressUpdateIntervalMillis: 1000 },
           (status: AVPlaybackStatus) => {
             if (!status.isLoaded) {
@@ -48,7 +50,7 @@ export function RadioStreamPlayer({ stationKey, stationName }: { stationKey: Rad
         if (disposed) await sound.unloadAsync();
         else soundRef.current = sound;
       } catch (playbackError) {
-        console.warn('[Radio] Proxy playback failed', playbackError);
+        console.warn('[Radio] Playback failed', playbackError);
         setError(true);
       } finally {
         if (!disposed) setIsLoading(false);
@@ -111,7 +113,7 @@ export default function RadioSection() {
       </ScrollView>
       {activeStation && (
         <View style={styles.playerContainer}>
-          <RadioStreamPlayer stationKey={activeStation.key} stationName={activeStation.name} />
+          <RadioStreamPlayer stationKey={activeStation.key} stationName={activeStation.name} directUrl={activeStation.directUrl} />
           <TouchableOpacity onPress={() => setActiveStation(null)} style={styles.closePlayer}><Ionicons name="close" size={20} color="#FFFFFF" /></TouchableOpacity>
         </View>
       )}
