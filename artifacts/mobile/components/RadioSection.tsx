@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Audio } from 'expo-av';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -30,24 +30,27 @@ function SectionHeader({ title }: { title: string }) {
 export default function RadioSection() {
   const colors = useColors();
   const { radioStations } = useApp();
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const player = useAudioPlayer(null);
+  const playerStatus = useAudioPlayerStatus(player);
   const webAudioRef = useRef<HTMLAudioElement | null>(null);
+  const hlsRef = useRef<{ destroy: () => void } | null>(null);
   const [activeStation, setActiveStation] = useState<RadioStation | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState(false);
 
   const stopCurrent = useCallback(async () => {
-    if (soundRef.current) {
-      await soundRef.current.unloadAsync().catch(() => {});
-      soundRef.current = null;
+    if (player) {
+      player.pause();
     }
+    hlsRef.current?.destroy();
+    hlsRef.current = null;
     if (webAudioRef.current) {
       webAudioRef.current.pause();
       webAudioRef.current.src = '';
       webAudioRef.current = null;
     }
     setIsPlaying(false);
-  }, []);
+  }, [player]);
 
   const playStation = useCallback(async (station: RadioStation) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -56,43 +59,76 @@ export default function RadioSection() {
     setActiveStation(station);
     try {
       if (Platform.OS === 'web') {
-        const audio = new globalThis.Audio(station.url);
+        const audio = document.createElement('audio');
+        audio.preload = 'none';
+        audio.crossOrigin = 'anonymous';
+        audio.setAttribute('type', 'application/vnd.apple.mpegurl');
         audio.addEventListener('playing', () => setIsPlaying(true));
         audio.addEventListener('pause', () => setIsPlaying(false));
-        audio.addEventListener('error', () => { setError(true); setIsPlaying(false); });
+        audio.addEventListener('error', () => {
+          console.error('[Radio] Web stream error', { station: station.name, url: station.url, error: audio.error });
+          setError(true);
+          setIsPlaying(false);
+        });
         webAudioRef.current = audio;
+        if (station.url.endsWith('.m3u8')) {
+          const HlsModule = await import('hls.js');
+          const Hls = HlsModule.default;
+          if (Hls.isSupported()) {
+            const hls = new Hls({ enableWorker: true });
+            hls.on(Hls.Events.ERROR, (_event, data) => {
+              console.error('[Radio] HLS error', { station: station.name, url: station.url, data });
+              if (data.fatal) {
+                setError(true);
+                setIsPlaying(false);
+                hls.destroy();
+              }
+            });
+            hls.loadSource(station.url);
+            hls.attachMedia(audio);
+            hlsRef.current = hls;
+          } else {
+            audio.src = station.url;
+          }
+        } else {
+          audio.src = station.url;
+        }
         await audio.play();
         setIsPlaying(true);
       } else {
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: station.url },
-          { shouldPlay: true },
-        );
-        soundRef.current = sound;
-        sound.setOnPlaybackStatusUpdate(status => {
-          if (status.isLoaded) setIsPlaying(status.isPlaying);
-          else if (status.error) setError(true);
-        });
+        player.replace({ uri: station.url });
+        player.play();
         setIsPlaying(true);
       }
-    } catch {
+    } catch (runtimeError) {
+      console.error('[Radio] Failed to load/play stream', {
+        station: station.name,
+        url: station.url,
+        error: runtimeError,
+      });
       setError(true);
       setIsPlaying(false);
     }
-  }, [stopCurrent]);
+  }, [player, stopCurrent]);
 
   const togglePlayback = async () => {
     if (!activeStation) return;
     if (isPlaying) {
       if (Platform.OS === 'web') webAudioRef.current?.pause();
-      else await soundRef.current?.pauseAsync();
+      else player.pause();
       setIsPlaying(false);
     } else {
       if (Platform.OS === 'web') await webAudioRef.current?.play();
-      else await soundRef.current?.playAsync();
+      else player.play();
       setIsPlaying(true);
     }
   };
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' && playerStatus.isLoaded) {
+      setIsPlaying(playerStatus.playing);
+    }
+  }, [activeStation, playerStatus]);
 
   useEffect(() => () => { void stopCurrent(); }, [stopCurrent]);
 
