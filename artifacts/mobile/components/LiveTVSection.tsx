@@ -61,16 +61,40 @@ function PlayerModal({ channel, onClose }: { channel: Channel | null; onClose: (
             </View>
           ) : (
             <View style={styles.iframeFrame}>
+              {/*
+               * Loading a complete document with YouTube as its base origin
+               * avoids the mobile WebView treating the live embed as a direct
+               * video URL (which can trigger YouTube error 152).
+               */}
               <WebView
                 source={{
-                  uri: channel.url,
-                  headers: {
-                    Referer: 'https://www.youtube.com',
-                  },
+                  html: `<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+      .embed-container { position: relative; width: 100%; height: 100%; overflow: hidden; }
+      .embed-container iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    </style>
+  </head>
+  <body>
+    <div class="embed-container">
+      <iframe
+        src="${channel.url}${channel.url.includes('?') ? '&' : '?'}autoplay=1&playsinline=1&enablejsapi=1"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen>
+      </iframe>
+    </div>
+  </body>
+</html>`,
+                  baseUrl: 'https://www.youtube.com',
                 }}
                 style={styles.nativeWebView}
                 userAgent="Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
                 javaScriptEnabled={true}
+                domStorageEnabled={true}
                 allowsInlineMediaPlayback={true}
                 mediaPlaybackRequiresUserAction={false}
                 allowsFullscreenVideo
