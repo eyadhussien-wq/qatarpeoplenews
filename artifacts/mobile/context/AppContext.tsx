@@ -123,12 +123,13 @@ const DEFAULT_AFFILIATES: AffiliateProduct[] = [
   { id: '4', name: 'كيبورد ميكانيكي', price: '199 ريال', buyUrl: 'https://amazon.sa', platform: 'amazon' },
 ];
 
-export const STATIONS_VERSION = 'v11_official_web_players';
+export const STATIONS_VERSION = 'v13_tabie_net_hls';
 export const DEFAULT_RADIO: RadioStation[] = [
-  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم', url: 'https://qurany.net/live', color: '#1A4B38' },
-  { id: 'sout-al-khaleej', name: 'صوت الخليج', url: 'https://www.soutalkhaleej.fm/live-stream', color: '#6B1A4B' },
-  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', url: 'https://qmc.qa/radio/qatar-radio', color: '#1A3A6B' },
-  { id: 'rayyan', name: 'راديو الريان', url: 'https://alrayyan.tv/radio-live', color: '#8A1538' },
+  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم', url: 'https://qmcconnect.qa/api/StreamServices/qur/master.m3u8', color: '#1A4B38' },
+  // Tabie currently exposes no separate Sout Al Khaleej channel; this is its verified Al Rayyan FM HLS feed.
+  { id: 'sout-al-khaleej', name: 'صوت الخليج', url: 'https://qmcconnect.qa/api/StreamServices/alrayyanfm/master.m3u8', color: '#6B1A4B' },
+  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', url: 'https://qmcconnect.qa/api/StreamServices/qr/master.m3u8', color: '#1A3A6B' },
+  { id: 'rayyan', name: 'راديو الريان', url: 'https://qmcconnect.qa/api/StreamServices/alrayyanfm/master.m3u8', color: '#8A1538' },
 ];
 
 const KEYS = {
