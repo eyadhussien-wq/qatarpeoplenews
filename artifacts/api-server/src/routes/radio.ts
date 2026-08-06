@@ -8,57 +8,79 @@ const RADIO_STREAMS: Record<string, string> = {
   "rayyan": "https://stream.zeno.fm/0388y681bf9uv",
 };
 
-const TABIE_HLS_STREAMS: Record<string, string> = {
-  qur: "https://qmcconnect.qa/v1/live/qur/master.m3u8",
-  skfm: "https://qmcconnect.qa/v1/live/skfm/master.m3u8",
-  qr: "https://qmcconnect.qa/v1/live/qr/master.m3u8",
-  alrayyanfm: "https://qmcconnect.qa/v1/live/alrayyanfm/master.m3u8",
+const RADIO_PROXY_STREAMS: Record<string, string[]> = {
+  qur: [
+    "https://qmcconnect.qa/v1/live/qur/master.m3u8",
+    "https://stream.radiojar.com/quran_qatar",
+  ],
+  skfm: [
+    "https://qmcconnect.qa/v1/live/skfm/master.m3u8",
+    "https://skfm.out.airtime.pro/skfm_a",
+  ],
+  qr: [
+    "https://qmcconnect.qa/v1/live/qr/master.m3u8",
+    "https://stream.radiojar.com/qatar_radio",
+  ],
+  alrayyanfm: [
+    "https://qmcconnect.qa/v1/live/alrayyanfm/master.m3u8",
+    "https://stream.zeno.fm/alrayyan",
+  ],
 };
 
 const radioRouter = Router();
 
 radioRouter.get("/radio-proxy/:station", async (req, res) => {
-  const targetUrl = TABIE_HLS_STREAMS[req.params.station];
-  if (!targetUrl) {
+  const targetUrls = RADIO_PROXY_STREAMS[req.params.station];
+  if (!targetUrls) {
     res.status(404).send("Station not found");
     return;
   }
 
-  try {
-    const upstream = await fetch(targetUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Referer: "https://tabie.net/",
-        Origin: "https://tabie.net",
-        Accept: "*/*",
-      },
-      redirect: "follow",
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!upstream.ok) {
-      res.status(upstream.status).send("Stream upstream error");
+  for (const targetUrl of targetUrls) {
+    try {
+      const upstream = await fetch(targetUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          Accept: "*/*",
+          Referer: "https://tabie.net/",
+        },
+        redirect: "follow",
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!upstream.ok || !upstream.body) {
+        console.warn(`Failed to fetch ${targetUrl}: ${upstream.status}`);
+        continue;
+      }
+
+      const contentType = upstream.headers.get("content-type") ?? "";
+      const isPlaylist = targetUrl.toLowerCase().endsWith(".m3u8")
+        || contentType.includes("mpegurl")
+        || contentType.includes("vnd.apple");
+      res.setHeader("Content-Type", isPlaylist ? "application/vnd.apple.mpegurl" : (contentType || "audio/mpeg"));
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
+      if (isPlaylist) {
+        const playlistText = await upstream.text();
+        const baseUrl = new URL(targetUrl);
+        const rewrittenPlaylist = playlistText.split("\n").map((line) => {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith("#") || /^https?:\/\//i.test(trimmed)) return line;
+          try { return new URL(trimmed, baseUrl).toString(); } catch { return line; }
+        }).join("\n");
+        res.send(rewrittenPlaylist);
+      } else {
+        const stream = Readable.fromWeb(upstream.body as Parameters<typeof Readable.fromWeb>[0]);
+        stream.on("error", (error) => res.destroy(error));
+        req.on("close", () => stream.destroy());
+        stream.pipe(res);
+      }
       return;
+    } catch (error) {
+      console.warn(`Failed to fetch ${targetUrl}, trying next stream...`, error);
     }
-
-    const playlistText = await upstream.text();
-    const baseUrl = targetUrl.slice(0, targetUrl.lastIndexOf("/") + 1);
-    const rewrittenPlaylist = playlistText
-      .split("\n")
-      .map((line) => {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith("#") || /^https?:\/\//i.test(trimmed)) return line;
-        return `${baseUrl}${trimmed}`;
-      })
-      .join("\n");
-
-    res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.send(rewrittenPlaylist);
-  } catch (error) {
-    console.error(`HLS Proxy Error [${req.params.station}]:`, error);
-    if (!res.headersSent) res.status(502).send("Proxy Stream Failed");
   }
+  res.status(502).send("All stream sources failed");
 });
 
 radioRouter.get("/radio/stream/:stationId", async (req, res) => {
