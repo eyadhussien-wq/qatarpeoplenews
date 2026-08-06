@@ -67,8 +67,10 @@ export default function RadioSection() {
           uri: station.url,
           overrideExtension: 'm3u8',
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             Referer: 'https://tabie.net/',
+            Origin: 'https://tabie.net',
+            Accept: '*/*',
           },
         } as Parameters<typeof Audio.Sound.createAsync>[0];
       const { sound } = await Audio.Sound.createAsync(

@@ -1,0 +1,62 @@
+We are extremely close! The HLS streaming engine is correct. Now we just need to solve the 403 Forbidden CORS restrictions and set the exact Sout Al Khaleej stream endpoint from tabie.net.
+
+Please apply this final patch to RadioSection.tsx and AppContext.tsx:
+
+Step 1: Add Origin Header in RadioSection.tsx
+In RadioSection.tsx, update Audio.Sound.createAsync headers to include the explicit Origin along with Referer so qmcconnect.qa doesn't reject the connection with a 403 Forbidden:
+
+TypeScript
+const { sound } = await Audio.Sound.createAsync(
+  {
+    uri: station.url,
+    overrideExtension: 'm3u8',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Referer': 'https://tabie.net/',
+      'Origin': 'https://tabie.net',
+      'Accept': '*/*'
+    }
+  },
+  { 
+    shouldPlay: true,
+    progressUpdateIntervalMillis: 1000 
+  }
+);
+Step 2: Update AppContext.tsx with Official Sout Al Khaleej Link
+Bump STATIONS_VERSION = 'v14_tabie_hls_headers_fix' and set the official Sout Al Khaleej stream URL alongside the other stations:
+
+TypeScript
+const STATIONS_VERSION = 'v14_tabie_hls_headers_fix';
+
+export const DEFAULT_RADIO_STATIONS = [
+  {
+    id: 'quran-qatar',
+    name: 'إذاعة القرآن الكريم',
+    url: 'https://qmcconnect.qa/v1/live/qur/master.m3u8', // Exact Tabie HLS
+    icon: 'radio'
+  },
+  {
+    id: 'sout-al-khaleej',
+    name: 'صوت الخليج',
+    url: 'https://qmcconnect.qa/v1/live/skfm/master.m3u8', // Sout Al Khaleej Tabie HLS
+    icon: 'radio'
+  },
+  {
+    id: 'qatar-radio',
+    name: 'إذاعة قطر - البرنامج العام',
+    url: 'https://qmcconnect.qa/v1/live/qr/master.m3u8', // Qatar Radio Tabie HLS
+    icon: 'radio'
+  },
+  {
+    id: 'rayyan',
+    name: 'راديو الريان',
+    url: 'https://qmcconnect.qa/v1/live/alrayyanfm/master.m3u8', // Al Rayyan Tabie HLS
+    icon: 'radio'
+  }
+];
+Step 3: Clear Storage & Restart Expo
+Ensure AsyncStorage forces overwrite for v14_tabie_hls_headers_fix.
+
+Run pnpm exec tsc --noEmit.
+
+Restart Expo workflow and test playing streams.
