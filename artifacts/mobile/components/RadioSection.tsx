@@ -17,16 +17,39 @@ const generateAudioHtml = (hlsUrl: string) => {
   return `<!doctype html>
 <html><head><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-html,body{margin:0;height:100%;background:#1a1a1a;color:#fff;font-family:Arial,sans-serif}
-body{display:flex;align-items:center;padding:0 14px;box-sizing:border-box}
-audio{width:100%;height:48px;accent-color:#d4af37}
+html,body{margin:0;height:100%;background:#111;color:#fff;font-family:Arial,sans-serif}
+body{display:flex;align-items:center;gap:10px;padding:0 14px;box-sizing:border-box}
+button{border:0;border-radius:22px;background:#d4af37;color:#241b00;width:44px;height:44px;font-size:20px;cursor:pointer}
+#status{font-size:13px;flex:1;text-align:right}
+audio{display:none}
 </style></head><body>
-<audio id="player" controls autoplay playsinline></audio>
+<button id="toggle" aria-label="تشغيل الراديو">▶</button><span id="status">جارٍ تجهيز البث…</span>
+<audio id="audio" playsinline></audio>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.16/dist/hls.min.js"></script>
 <script>
-const url=${safeUrl}, audio=document.getElementById('player');
-if(audio.canPlayType('application/vnd.apple.mpegurl')){audio.src=url;audio.play().catch(()=>{});}
-else if(window.Hls&&Hls.isSupported()){const hls=new Hls({enableWorker:true});hls.loadSource(url);hls.attachMedia(audio);hls.on(Hls.Events.MANIFEST_PARSED,()=>audio.play().catch(()=>{}));}
+const streamUrl=${safeUrl},audio=document.getElementById('audio'),status=document.getElementById('status'),toggle=document.getElementById('toggle');
+let hls=null,ready=false;
+function setStatus(text){status.textContent=text;}
+function updateButton(){toggle.textContent=audio.paused?'▶':'❚❚';}
+function startPlayback(){audio.play().then(()=>{setStatus('يعمل الآن المباشر');updateButton();}).catch(()=>setStatus('اضغط على زر التشغيل للبدء'));}
+function initPlayer(){
+ if(window.Hls&&Hls.isSupported()){
+  hls=new Hls({enableWorker:true,lowLatencyMode:true,backBufferLength:90});
+  hls.loadSource(streamUrl);hls.attachMedia(audio);
+  hls.on(Hls.Events.MANIFEST_PARSED,()=>{ready=true;setStatus('جاهز للتشغيل');});
+  hls.on(Hls.Events.ERROR,(event,data)=>{
+   if(!data.fatal)return;
+   if(data.type===Hls.ErrorTypes.NETWORK_ERROR){setStatus('إعادة الاتصال…');hls.startLoad();}
+   else if(data.type===Hls.ErrorTypes.MEDIA_ERROR){setStatus('استرداد البث…');hls.recoverMediaError();}
+   else{setStatus('تعذر تشغيل البث');hls.destroy();}
+  });
+ }else if(audio.canPlayType('application/vnd.apple.mpegurl')){
+  audio.src=streamUrl;audio.addEventListener('loadedmetadata',()=>{ready=true;setStatus('جاهز للتشغيل');});
+ }else setStatus('المتصفح لا يدعم HLS');
+}
+toggle.addEventListener('click',()=>{if(audio.paused){if(ready)startPlayback();else setStatus('جارٍ تجهيز البث…');}else{audio.pause();updateButton();setStatus('متوقف مؤقتاً');}});
+audio.addEventListener('play',updateButton);audio.addEventListener('pause',updateButton);
+document.addEventListener('DOMContentLoaded',initPlayer);
 </script></body></html>`;
 };
 
@@ -117,7 +140,7 @@ const styles = StyleSheet.create({
   playerHeader: { height: 38, marginHorizontal: 12, marginTop: 8, paddingHorizontal: 10, borderTopLeftRadius: 12, borderTopRightRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   playerStation: { color: '#FFFFFF', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   closePlayer: { padding: 4 },
-  playerContainer: { height: 90, width: '100%', borderRadius: 12, overflow: 'hidden', backgroundColor: '#1a1a1a', marginVertical: 10 },
+  playerContainer: { height: 95, width: '100%', borderRadius: 12, overflow: 'hidden', backgroundColor: '#111111', marginVertical: 10 },
   webview: { flex: 1, backgroundColor: 'transparent' },
   iframe: { width: '100%', height: '100%', borderWidth: 0 },
 });
