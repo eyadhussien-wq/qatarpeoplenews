@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { WebView } from 'react-native-webview';
+import YoutubePlayer from 'react-native-youtube-iframe';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useApp, type Channel } from '@/context/AppContext';
@@ -36,6 +36,7 @@ function PlayerModal({ channel, onClose }: { channel: Channel | null; onClose: (
   const colors = useColors();
 
   if (!channel) return null;
+  const videoId = channel.url.match(/embed\/([^?&/]+)/)?.[1] ?? '';
 
   return (
     <Modal visible={!!channel} animationType="fade" transparent onRequestClose={onClose}>
@@ -61,45 +62,15 @@ function PlayerModal({ channel, onClose }: { channel: Channel | null; onClose: (
             </View>
           ) : (
             <View style={styles.iframeFrame}>
-              {/*
-               * Loading a complete document with YouTube as its base origin
-               * avoids the mobile WebView treating the live embed as a direct
-               * video URL (which can trigger YouTube error 152).
-               */}
-              <WebView
-                source={{
-                  html: `<!DOCTYPE html>
-<html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <style>
-      html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
-      .embed-container { position: relative; width: 100%; height: 100%; overflow: hidden; }
-      .embed-container iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-    </style>
-  </head>
-  <body>
-    <div class="embed-container">
-      <iframe
-        src="${channel.url}${channel.url.includes('?') ? '&' : '?'}autoplay=1&playsinline=1&enablejsapi=1"
-        frameborder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen>
-      </iframe>
-    </div>
-  </body>
-</html>`,
-                  baseUrl: 'https://www.youtube.com',
+              <YoutubePlayer
+                height={230}
+                play={true}
+                videoId={videoId}
+                webViewProps={{
+                  allowsInlineMediaPlayback: true,
+                  allowsFullscreenVideo: true,
+                  androidLayerType: 'hardware',
                 }}
-                style={styles.nativeWebView}
-                userAgent="Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-                javaScriptEnabled={true}
-                domStorageEnabled={true}
-                allowsInlineMediaPlayback={true}
-                mediaPlaybackRequiresUserAction={false}
-                allowsFullscreenVideo
-                startInLoadingState
-                originWhitelist={['*']}
               />
             </View>
           )}
@@ -149,7 +120,6 @@ const styles = StyleSheet.create({
   playerTitle: { fontSize: 16, textAlign: 'right', flex: 1 },
   closeButton: { padding: 6, marginLeft: 8 },
   iframeFrame: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#000' },
-  nativeWebView: { flex: 1, backgroundColor: '#000000' },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
