@@ -49,8 +49,8 @@ export default function RadioSection() {
 
   const playStation = useCallback((station: RadioStation) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsBuffering(true);
     setStreamError(false);
+    setIsBuffering(true);
     void stopCurrent();
     setActiveStation(station);
     if (Platform.OS === 'web') {
@@ -152,20 +152,28 @@ export default function RadioSection() {
         <View style={styles.hiddenWebView}>
           <WebView
             key={activeStation.id}
-            allowsInlineMediaPlayback
+            originWhitelist={['*']}
+            allowsInlineMediaPlayback={true}
             mediaPlaybackRequiresUserAction={false}
-            javaScriptEnabled
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            userAgent="Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36"
+            mixedContentMode="always"
             source={{
               html: `<!DOCTYPE html>
-<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body><audio id="radioPlayer" autoplay style="display:none"></audio>
+<html>
+<head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body><audio id="player" src=${JSON.stringify(activeStation.url)} preload="auto" crossorigin="anonymous"></audio>
 <script>
-  const audio = document.getElementById('radioPlayer');
-  audio.src = ${JSON.stringify(activeStation.url)};
-  audio.addEventListener('waiting', () => window.ReactNativeWebView.postMessage('buffering'));
-  audio.addEventListener('playing', () => window.ReactNativeWebView.postMessage('playing'));
-  audio.addEventListener('error', () => window.ReactNativeWebView.postMessage('error'));
-  audio.play().catch(() => window.ReactNativeWebView.postMessage('error'));
+  const audio = document.getElementById('player');
+  audio.play().then(() => {
+    window.ReactNativeWebView.postMessage('playing');
+  }).catch(() => {
+    window.ReactNativeWebView.postMessage('error');
+  });
+  audio.onwaiting = () => window.ReactNativeWebView.postMessage('buffering');
+  audio.onplaying = () => window.ReactNativeWebView.postMessage('playing');
+  audio.onerror = () => window.ReactNativeWebView.postMessage('error');
 </script></body></html>`,
             }}
             onMessage={(event) => {
@@ -173,6 +181,7 @@ export default function RadioSection() {
               if (message === 'buffering') {
                 setIsBuffering(true);
               } else if (message === 'playing') {
+                setStreamError(false);
                 setIsBuffering(false);
                 setIsPlaying(true);
               } else if (message === 'error') {
