@@ -31,13 +31,14 @@ export function RadioStreamPlayer({ stationName, streamUrl, onClose }: { station
           playThroughEarpieceAndroid: false,
         });
         const { sound } = await Audio.Sound.createAsync(
-          { uri: streamUrl },
+          { uri: streamUrl, overrideFileExtensionAndroid: 'm3u8' },
           { shouldPlay: true },
           (status: AVPlaybackStatus) => {
             if (status.isLoaded) {
               setIsPlaying(status.isPlaying);
               setIsLoading(false);
             } else if (status.error) {
+              console.error('Audio status error:', status.error);
               setHasError(true);
               setIsLoading(false);
             }
