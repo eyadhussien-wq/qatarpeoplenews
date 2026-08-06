@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { Audio } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -30,8 +30,7 @@ function SectionHeader({ title }: { title: string }) {
 export default function RadioSection() {
   const colors = useColors();
   const { radioStations } = useApp();
-  const player = useAudioPlayer(null);
-  const playerStatus = useAudioPlayerStatus(player);
+  const soundRef = useRef<Audio.Sound | null>(null);
   const webAudioRef = useRef<HTMLAudioElement | null>(null);
   const hlsRef = useRef<{ destroy: () => void } | null>(null);
   const [activeStation, setActiveStation] = useState<RadioStation | null>(null);
@@ -39,8 +38,19 @@ export default function RadioSection() {
   const [error, setError] = useState(false);
 
   const stopCurrent = useCallback(async () => {
-    if (player) {
-      player.pause();
+    const sound = soundRef.current;
+    soundRef.current = null;
+    if (sound) {
+      try {
+        await sound.stopAsync();
+      } catch (error) {
+        console.warn('[Radio] stop cleanup skipped', error);
+      }
+      try {
+        await sound.unloadAsync();
+      } catch (error) {
+        console.warn('[Radio] unload cleanup skipped', error);
+      }
     }
     hlsRef.current?.destroy();
     hlsRef.current = null;
@@ -50,17 +60,18 @@ export default function RadioSection() {
       webAudioRef.current = null;
     }
     setIsPlaying(false);
-  }, [player]);
+  }, []);
 
   const playStation = useCallback(async (station: RadioStation) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setError(false);
+    // Respond immediately to the tap; cleanup is kept small and explicit.
     await stopCurrent();
     setActiveStation(station);
     try {
       if (Platform.OS === 'web') {
         const isHls = station.url.includes('.m3u8');
-        const audio = new globalThis.Audio();
+        const audio = new globalThis.Audio(station.url);
         audio.preload = 'none';
         audio.crossOrigin = 'anonymous';
         audio.addEventListener('playing', () => setIsPlaying(true));
@@ -86,9 +97,9 @@ export default function RadioSection() {
                 hls.destroy();
               }
             });
-            hls.loadSource(station.url);
             hls.attachMedia(audio);
             hlsRef.current = hls;
+            hls.loadSource(station.url);
           } else {
             // Safari and some mobile browsers have native HLS support.
             audio.src = station.url;
@@ -97,19 +108,27 @@ export default function RadioSection() {
           // Icecast/MP3/AAC streams must bypass hls.js.
           audio.src = station.url;
         }
-        await audio.play();
-      } else {
-        await setAudioModeAsync({
-          playsInSilentMode: true,
-          shouldPlayInBackground: true,
-          interruptionMode: 'duckOthers',
+        audio.play().catch((error) => {
+          console.error('[Radio] Web Play Error:', { station: station.name, url: station.url, error });
+          setError(true);
+          setIsPlaying(false);
         });
-        player.volume = 1.0;
-        player.muted = false;
-        player.replace({ uri: station.url });
-        player.volume = 1.0;
-        player.muted = false;
-        player.play();
+        setIsPlaying(true);
+      } else {
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: station.url },
+          { shouldPlay: true, volume: 1.0, isMuted: false },
+        );
+        soundRef.current = sound;
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded) setIsPlaying(status.isPlaying);
+          else if (status.error) {
+            console.error('[Radio] Native playback error', { station: station.name, url: station.url, error: status.error });
+            setError(true);
+            setIsPlaying(false);
+          }
+        });
+        setIsPlaying(true);
       }
     } catch (runtimeError) {
       console.error('[Radio] Failed to load/play stream', {
@@ -120,27 +139,22 @@ export default function RadioSection() {
       setError(true);
       setIsPlaying(false);
     }
-  }, [player, stopCurrent]);
+  }, [stopCurrent]);
 
   const togglePlayback = async () => {
     if (!activeStation) return;
     if (isPlaying) {
       if (Platform.OS === 'web') webAudioRef.current?.pause();
-      else player.pause();
+      else await soundRef.current?.pauseAsync();
       setIsPlaying(false);
     } else {
       try {
-        if (Platform.OS === 'web') await webAudioRef.current?.play();
-        else {
-          await setAudioModeAsync({
-            playsInSilentMode: true,
-            shouldPlayInBackground: true,
-            interruptionMode: 'duckOthers',
-          });
-          player.volume = 1.0;
-          player.muted = false;
-          player.play();
+        if (Platform.OS === 'web') {
+          webAudioRef.current?.play().catch((error) => console.error('[Radio] Web Play Error:', error));
+        } else {
+          await soundRef.current?.playAsync();
         }
+        setIsPlaying(true);
       } catch (runtimeError) {
         console.error('[Radio] Failed to resume stream', {
           station: activeStation.name,
@@ -153,12 +167,6 @@ export default function RadioSection() {
     }
   };
 
-  useEffect(() => {
-    if (Platform.OS !== 'web' && playerStatus.isLoaded) {
-      setIsPlaying(playerStatus.playing);
-    }
-  }, [activeStation, playerStatus]);
-
   useEffect(() => () => { void stopCurrent(); }, [stopCurrent]);
 
   return (
@@ -166,7 +174,15 @@ export default function RadioSection() {
       <SectionHeader title="بث إذاعي وبودكاست" />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {radioStations.map(station => (
-          <TouchableOpacity key={station.id} style={styles.card} onPress={() => void playStation(station)} activeOpacity={0.8}>
+          <TouchableOpacity
+            key={station.id}
+            style={styles.card}
+            onPress={() => {
+              if (activeStation?.id === station.id) void togglePlayback();
+              else void playStation(station);
+            }}
+            activeOpacity={0.8}
+          >
             <LinearGradient colors={[station.color, darken(station.color)]} style={styles.cardGradient}>
               <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
                 <Ionicons name="radio" size={28} color={colors.gold} />
