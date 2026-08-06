@@ -124,10 +124,10 @@ const DEFAULT_AFFILIATES: AffiliateProduct[] = [
 ];
 
 export const DEFAULT_RADIO: RadioStation[] = [
-  { id: '1', name: 'إذاعة القرآن الكريم (الدوحة)', url: 'https://stream.zeno.fm/f3wvbb1vbf9uv', color: '#1A4B38' },
-  { id: '2', name: 'إذاعة قطر - البرنامج العام', url: 'https://stream.zeno.fm/4v629851bf9uv', color: '#1A3A6B' },
+  { id: '1', name: 'إذاعة القرآن الكريم (الدوحة)', url: 'https://qurany.net:8443/quran', color: '#1A4B38' },
+  { id: '2', name: 'إذاعة قطر - البرنامج العام', url: 'https://stream.radiojar.com/qatarradio', color: '#1A3A6B' },
   { id: '3', name: 'صوت الخليج', url: 'https://stream.soutalkhaleej.fm/listen', color: '#6B1A4B' },
-  { id: '4', name: 'راديو الريان', url: 'https://stream.zeno.fm/0388y681bf9uv', color: '#8A1538' },
+  { id: '4', name: 'راديو الريان', url: 'https://stream.alrayyan.tv/radio.mp3', color: '#8A1538' },
 ];
 
 const KEYS = {
@@ -135,6 +135,8 @@ const KEYS = {
   CAROUSEL: '@ahl_qatar_carousel_v1',
   ADS: '@ahl_qatar_ads_v1',
   AFFILIATES: '@ahl_qatar_affiliates_v1',
+  RADIO_LEGACY: '@ahl_qatar_radio_v1',
+  RADIO_LEGACY_ALT: '@ahl_qatar_radio',
 } as const;
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -147,6 +149,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isDrawerOpen, setDrawerOpenState] = useState(false);
 
   useEffect(() => {
+    // Radio stations are shipped defaults, not user-editable data. Remove
+    // legacy persisted copies so old failed URLs cannot be reused by clients.
+    void AsyncStorage.multiRemove([KEYS.RADIO_LEGACY, KEYS.RADIO_LEGACY_ALT]);
     AsyncStorage.multiGet([KEYS.CHANNELS, KEYS.CAROUSEL, KEYS.ADS, KEYS.AFFILIATES])
       .then(pairs => {
         for (const [key, value] of pairs) {
