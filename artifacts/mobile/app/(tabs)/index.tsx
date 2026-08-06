@@ -9,6 +9,7 @@ import AdBanner from '@/components/AdBanner';
 import LiveTVSection from '@/components/LiveTVSection';
 import AffiliateGrid from '@/components/AffiliateGrid';
 import RadioSection from '@/components/RadioSection';
+import DealsSection from '@/components/DealsSection';
 import Footer from '@/components/Footer';
 import StickyAdBanner from '@/components/StickyAdBanner';
 import DrawerMenu from '@/components/DrawerMenu';
@@ -37,6 +38,7 @@ export default function HomeScreen() {
         <HeroCarousel />
         <AdBanner />
         <LiveTVSection />
+        <DealsSection />
         <AffiliateGrid />
         <RadioSection />
         <Footer />
