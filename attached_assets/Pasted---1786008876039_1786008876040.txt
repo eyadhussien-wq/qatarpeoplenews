@@ -1,0 +1,62 @@
+رائع جداً! التصميم أصبح الآن أسرع وأكثر تناسقاً مدمجاً بعد ضبط الأبعاد، ولكن بقيت نقاط جوهرية تحتاج حسم تقني فوراً:
+
+**1. رابط القطرية (`Page Not Found`):**
+السبب أن الـ Agent استخدم رابطاً شاملاً قديم، والحل هو ربطه بالصفحة الرئيسية للعروض (`[https://www.qatarairways.com/ar/offers.html](https://www.qatarairways.com/ar/offers.html)`) أو صفحة اكتشاف قطر التوقف القصيرة (`[https://www.qatarairways.com/ar/offers/stopover.html](https://www.qatarairways.com/ar/offers/stopover.html)`).
+
+**2. تغيير الأيقونات للعلامات الرسمية:**
+سيتم استبدال صورة حرف "ق" المكررة بروابط شعارات رسمية ناصعة (Logos PNG/SVG) لوزارة التجارة، الخطوط القطرية، الميرة، كارفور، واللولو.
+
+**3. هل نستخدم الـ APIs الخاصة بهذه الجهات؟**
+
+* **الواقع التقني:** الجهات الحكومية والشركات الكبرى (مثل الخطوط القطرية أو السوبرماركت) لا تمنح APIs مفتوحة للعامة بدون شراكة رسمية وتوثيق تجاري (B2B API Agreements).
+* **الحل الذكي المعتمد (Web Scraping / Backend Proxy):** نقوم بإنشاء خدمة خفيفة في السيرفر الخاص بنا (`Node.js Backend`) تقرأ مجلات العروض والنشرات المحدثة وتجلب بياناتها بصيغة JSON لنعرضها فوراً داخل تطبيقنا بدون الحاجة لـ API خارجي.
+
+---
+
+### التوجيه النهائي الفاخر لـ Replit Agent
+
+انسخ هذا التوجيه المباشر وأرسله لـ **Replit Agent**:
+
+> Fix the broken links, logo assets, and enforce In-App WebBrowser navigation in `DealsSection.tsx` and `AppContext.tsx`:
+> ---
+> 
+> 
+> ### 1. Fix Qatar Airways & Official Deal URLs
+> 
+> 
+> Replace broken/outdated URLs in `DEFAULT_DEALS_DATA` with working direct promotion pages:
+> * **Qatar Airways Offers:** `[https://www.qatarairways.com/ar/offers.html](https://www.qatarairways.com/ar/offers.html)`
+> * **MoCI Price Index:** `[https://www.moci.gov.qa](https://www.moci.gov.qa)`
+> * **Visit Qatar Deals:** `[https://visitqatar.com/ar/plan-your-trip/deals-and-offers](https://visitqatar.com/ar/plan-your-trip/deals-and-offers)`
+> 
+> 
+> ---
+> 
+> 
+> ### 2. Update Official Store Logos (Replace "ق" Placeholders)
+> 
+> 
+> Replace repeated fallback icons with high-res PNG/SVG CDN logos for each brand:
+> * **Ministry of Commerce (MoCI):** `[https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Coat_of_arms_of_Qatar.svg/512px-Coat_of_arms_of_Qatar.svg.png](https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Coat_of_arms_of_Qatar.svg/512px-Coat_of_arms_of_Qatar.svg.png)`
+> * **Qatar Airways:** `[https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Qatar_Airways_Logo.svg/512px-Qatar_Airways_Logo.svg.png](https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Qatar_Airways_Logo.svg/512px-Qatar_Airways_Logo.svg.png)`
+> * **Al Meera:** Official Al Meera logo asset URL.
+> * **Carrefour / Lulu:** Official brand transparent logos.
+> 
+> 
+> ---
+> 
+> 
+> ### 3. Force In-App WebBrowser Overlay
+> 
+> 
+> Ensure tapping any deal fires `WebBrowser.openBrowserAsync(url)` using `expo-web-browser` with a maroon toolbar (`#580024`), keeping the user completely inside the app.
+> ---
+> 
+> 
+> ### 4. Validate & Restart
+> 
+> 
+> 1. Run `pnpm exec tsc --noEmit`.
+> 2. Restart Expo server and verify that logos display cleanly and all buttons open valid links inside the in-app overlay.
+> 
+>

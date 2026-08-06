@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as WebBrowser from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,14 +23,14 @@ function metadata(deal: (typeof DEFAULT_DEALS_DATA)[number]) {
   return `ينتهي ${expiry.toLocaleDateString('ar-QA', { weekday: 'long' })}`;
 }
 
-function nativeSchemeForUrl(url: string) {
-  const host = new URL(url).hostname.toLowerCase();
-  if (host.includes('qatarairways')) return 'qatarairways://';
-  if (host.includes('talabat')) return 'talabat://';
-  if (host.includes('almeera')) return 'almeera://';
-  if (host.includes('luluhypermarket')) return 'luluhypermarket://';
-  if (host.includes('carrefour')) return 'carrefour://';
-  return null;
+function BrandLogo({ uri, fallback }: { uri: string; fallback: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <View style={styles.logoBox}>
+      {!failed && <Image source={{ uri }} style={styles.image} resizeMode="contain" onError={() => setFailed(true)} />}
+      {failed && <Text style={styles.logoFallback}>{fallback}</Text>}
+    </View>
+  );
 }
 
 export default function DealsSection() {
@@ -41,11 +41,6 @@ export default function DealsSection() {
   const deals = useMemo(() => DEFAULT_DEALS_DATA.filter(deal => tab === 'all' || deal.category === tab), [tab]);
   const handleOpenDeal = async (url: string) => {
     try {
-      const scheme = nativeSchemeForUrl(url);
-      if (scheme && await Linking.canOpenURL(scheme)) {
-        await Linking.openURL(scheme);
-        return;
-      }
       await WebBrowser.openBrowserAsync(url, {
         toolbarColor: '#580024',
         controlsColor: '#FFD700',
@@ -79,14 +74,9 @@ export default function DealsSection() {
       {deals.map(deal => {
         const status = metadata(deal);
         const expired = status === 'انتهى العرض';
-        const localImage = deal.category === 'travel'
-          ? require('@/assets/images/hero-doha.jpg')
-          : deal.category === 'official_prices'
-            ? require('@/assets/images/hero-stadium.jpg')
-            : require('@/assets/images/icon_2.png');
+        const logoFallback = deal.id.startsWith('moci') ? 'MOCI' : deal.id.startsWith('visit') ? 'Visit Qatar' : deal.id.startsWith('qatar-airways') ? 'QATAR\nAIRWAYS' : deal.id.startsWith('al-meera') ? 'الميرة' : deal.id.startsWith('lulu') ? 'LuLu' : 'Carrefour';
         return <TouchableOpacity key={deal.id} activeOpacity={0.92} style={styles.card} onPress={() => void handleOpenDeal(deal.dealUrl)}>
-          <Image source={localImage} style={styles.image} resizeMode="cover" />
-          <View style={styles.imageShade} />
+          <BrandLogo uri={deal.image} fallback={logoFallback} />
           <View style={styles.cardBody}>
             <View style={styles.row}><Text style={styles.store}>{deal.storeName}</Text><TouchableOpacity onPress={() => void toggleSavedDeal(deal.id)}><Ionicons name={savedDeals.includes(deal.id) ? 'heart' : 'heart-outline'} size={22} color={savedDeals.includes(deal.id) ? '#B32645' : '#8A6420'} /></TouchableOpacity></View>
             <Text style={styles.title}>{deal.title}</Text>
@@ -115,7 +105,7 @@ const styles = StyleSheet.create({
   activeTab: { backgroundColor: '#FFD700', borderColor: '#FFD700' },
   tabText: { color: '#F5DCE5', fontSize: 12 }, activeTabText: { color: '#580024', fontWeight: '700' },
   card: { marginHorizontal: 16, marginVertical: 6, borderRadius: 12, overflow: 'hidden', backgroundColor: '#FFFDF9', flexDirection: 'row', height: 130, maxHeight: 130, padding: 10, elevation: 3 },
-  image: { width: 110, height: 110, borderRadius: 9, backgroundColor: '#E9D8C4' }, imageShade: { position: 'absolute', left: 10, top: 10, width: 110, height: 110, borderRadius: 9, backgroundColor: 'rgba(74,14,23,0.18)' }, cardBody: { flex: 1, paddingHorizontal: 10, paddingVertical: 1, minWidth: 0 }, row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  logoBox: { width: 110, height: 110, borderRadius: 9, backgroundColor: '#F2E7D5', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }, image: { width: 92, height: 92 }, logoFallback: { position: 'absolute', color: '#580024', fontSize: 13, fontWeight: '900', textAlign: 'center', lineHeight: 17 }, imageShade: { position: 'absolute', left: 10, top: 10, width: 110, height: 110, borderRadius: 9, backgroundColor: 'rgba(74,14,23,0.05)' }, cardBody: { flex: 1, paddingHorizontal: 10, paddingVertical: 1, minWidth: 0 }, row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   store: { color: '#8A6420', fontSize: 11, fontWeight: '800' }, title: { color: '#36050C', fontSize: 13, fontWeight: '800', marginTop: 3, textAlign: 'right' },
   badges: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 7, marginTop: 5 }, verified: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#D4AF37', borderRadius: 12, paddingHorizontal: 7, paddingVertical: 3 }, verifiedText: { color: '#FFF8D6', fontSize: 10, fontWeight: '800' }, expiry: { color: '#80666B', fontSize: 10 }, expired: { color: '#999' },
   actions: { alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 6 },
