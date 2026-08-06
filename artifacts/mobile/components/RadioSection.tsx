@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,17 +15,26 @@ function darken(hex: string, n = 30): string {
 export function RadioStreamPlayer({ streamUrl, colors }: { streamUrl: string; colors: ReturnType<typeof useColors> }) {
   return (
     <View style={styles.playerContainer}>
-      <WebView
-        source={{ uri: streamUrl }}
-        style={styles.webview}
-        allowsInlineMediaPlayback
-        mediaPlaybackRequiresUserAction={false}
-        javaScriptEnabled
-        domStorageEnabled
-        startInLoadingState
-        renderLoading={() => <ActivityIndicator style={styles.loader} size="large" color={colors.gold} />}
-        userAgent="Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-      />
+      {Platform.OS === 'web' ? (
+        <iframe
+          src={streamUrl}
+          style={styles.iframe}
+          allow="autoplay; encrypted-media"
+          title="Radio Player"
+        />
+      ) : (
+        <WebView
+          source={{ uri: streamUrl }}
+          style={styles.webview}
+          allowsInlineMediaPlayback
+          mediaPlaybackRequiresUserAction={false}
+          javaScriptEnabled
+          domStorageEnabled
+          startInLoadingState
+          renderLoading={() => <ActivityIndicator style={styles.loader} size="large" color={colors.gold} />}
+          userAgent="Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+        />
+      )}
     </View>
   );
 }
@@ -93,5 +102,6 @@ const styles = StyleSheet.create({
   closePlayer: { padding: 4 },
   playerContainer: { height: 200, width: '100%', borderRadius: 16, overflow: 'hidden', backgroundColor: '#000000', marginVertical: 12 },
   webview: { flex: 1 },
+  iframe: { width: '100%', height: '100%', borderWidth: 0 },
   loader: { position: 'absolute', top: '45%', left: '45%' },
 });

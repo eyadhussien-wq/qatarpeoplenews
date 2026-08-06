@@ -123,12 +123,12 @@ const DEFAULT_AFFILIATES: AffiliateProduct[] = [
   { id: '4', name: 'كيبورد ميكانيكي', price: '199 ريال', buyUrl: 'https://amazon.sa', platform: 'amazon' },
 ];
 
-export const STATIONS_VERSION = 'v15_tabie_web_bridge';
+export const STATIONS_VERSION = 'v16_tabie_crossplatform';
 export const DEFAULT_RADIO: RadioStation[] = [
-  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم', url: 'https://tabie.net/live?channel=qur', color: '#1A4B38' },
-  { id: 'sout-al-khaleej', name: 'صوت الخليج', url: 'https://tabie.net/live?channel=skfm', color: '#6B1A4B' },
-  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', url: 'https://tabie.net/live?channel=qr', color: '#1A3A6B' },
-  { id: 'rayyan', name: 'راديو الريان', url: 'https://tabie.net/live?channel=alrayyanfm', color: '#8A1538' },
+  { id: 'quran-qatar', name: 'إذاعة القرآن الكريم', url: 'https://tabie.net/live', color: '#1A4B38' },
+  { id: 'sout-al-khaleej', name: 'صوت الخليج', url: 'https://tabie.net/live', color: '#6B1A4B' },
+  { id: 'qatar-radio', name: 'إذاعة قطر - البرنامج العام', url: 'https://tabie.net/live', color: '#1A3A6B' },
+  { id: 'rayyan', name: 'راديو الريان', url: 'https://tabie.net/live', color: '#8A1538' },
 ];
 
 const KEYS = {
