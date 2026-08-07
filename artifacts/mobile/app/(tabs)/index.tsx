@@ -9,6 +9,7 @@ import AdBanner from '@/components/AdBanner';
 import LiveTVSection from '@/components/LiveTVSection';
 import AffiliateGrid from '@/components/AffiliateGrid';
 import RadioSection from '@/components/RadioSection';
+import DiscoverQatarSection from '@/components/DiscoverQatarSection';
 import DealsSection from '@/components/DealsSection';
 import Footer from '@/components/Footer';
 import StickyAdBanner from '@/components/StickyAdBanner';
@@ -39,6 +40,7 @@ export default function HomeScreen() {
         <AdBanner />
         <LiveTVSection />
         <RadioSection />
+        <DiscoverQatarSection />
         <DealsSection />
         <AffiliateGrid />
         <Footer />
