@@ -3,6 +3,7 @@ import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const VISIT_QATAR = 'https://visitqatar.com/ar';
 const places = [
@@ -31,6 +32,7 @@ function PlaceCard({ place, onPress }: { place: typeof places[number]; onPress: 
 }
 
 export default function DiscoverQatarSection() {
+  const router = useRouter();
   const openPlace = async (url: string) => {
     try {
       await WebBrowser.openBrowserAsync(url, {
@@ -51,7 +53,7 @@ export default function DiscoverQatarSection() {
           <Text style={styles.heading}>🇶🇦 اكتشف معالم قطر</Text>
           <Text style={styles.kicker}>تجارب لا تُنسى في قلب الدوحة</Text>
         </View>
-        <TouchableOpacity onPress={() => void openPlace(VISIT_QATAR)} style={styles.allButton}>
+        <TouchableOpacity onPress={() => router.push('/tourism-guide')} style={styles.allButton}>
           <Text style={styles.allText}>عرض الكل</Text>
           <Ionicons name="arrow-back" size={14} color="#8A6420" />
         </TouchableOpacity>
