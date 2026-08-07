@@ -38,9 +38,9 @@ export default function HomeScreen() {
         <HeroCarousel />
         <AdBanner />
         <LiveTVSection />
+        <RadioSection />
         <DealsSection />
         <AffiliateGrid />
-        <RadioSection />
         <Footer />
       </ScrollView>
 

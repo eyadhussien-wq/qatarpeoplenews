@@ -137,11 +137,17 @@ export default function RadioSection() {
         <Text style={[styles.headerText, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>بث إذاعي وبودكاست</Text>
         <View style={[styles.headerLine, { backgroundColor: colors.border }]} />
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.grid}>
         {radioStations.map((station) => (
           <TouchableOpacity key={station.id} style={styles.card} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setActiveStation(activeStation?.id === station.id ? null : station); }} activeOpacity={0.8}>
             <LinearGradient colors={[station.color, darken(station.color)]} style={styles.cardGradient}>
-              <Ionicons name="radio" size={28} color={colors.gold} />
+              <View style={[styles.liveBadge, { backgroundColor: colors.liveBadge }]}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveText}>LIVE</Text>
+              </View>
+              <View style={styles.playCircle}>
+                <Ionicons name="radio" size={24} color="#FFFFFF" />
+              </View>
               <Text style={styles.stationName} numberOfLines={2}>{station.name}</Text>
               <View style={[styles.playBtn, { backgroundColor: colors.gold }]}>
                 <Ionicons name={activeStation?.id === station.id ? 'radio' : 'play'} size={15} color={colors.primaryDark} />
@@ -149,7 +155,7 @@ export default function RadioSection() {
             </LinearGradient>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
       {activeStation && (
         <View style={styles.playerContainer}>
           <RadioStreamPlayer stationName={activeStation.name} streamUrl={activeStation.streamUrl} webAudioUrl={activeStation.webAudioUrl} onClose={() => setActiveStation(null)} />
@@ -164,9 +170,13 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 18, marginBottom: 12, gap: 8 },
   headerLine: { flex: 1, height: 1 },
   headerText: { fontSize: 15 },
-  scrollContent: { paddingHorizontal: 16, paddingBottom: 10, gap: 12 },
-  card: { width: 122, height: 132, borderRadius: 16, overflow: 'hidden', elevation: 4 },
-  cardGradient: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 10, gap: 7 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 10 },
+  card: { width: '47%', height: 122, borderRadius: 14, overflow: 'hidden', elevation: 4 },
+  cardGradient: { flex: 1, padding: 10, justifyContent: 'space-between', alignItems: 'flex-end' },
+  liveBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, gap: 3 },
+  liveDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#FFFFFF' },
+  liveText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
+  playCircle: { position: 'absolute', top: 31, left: '50%', marginLeft: -23, width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(255,255,255,0.22)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.65)', alignItems: 'center', justifyContent: 'center' },
   stationName: { color: '#FFFFFF', fontSize: 12, textAlign: 'center', lineHeight: 17, fontFamily: 'Inter_600SemiBold' },
   playBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   playerContainer: { marginHorizontal: 12, marginTop: 8 },
