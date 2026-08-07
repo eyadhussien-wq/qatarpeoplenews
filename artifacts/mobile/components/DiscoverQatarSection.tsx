@@ -51,7 +51,7 @@ export default function DiscoverQatarSection() {
           <Text style={styles.heading}>🇶🇦 اكتشف معالم قطر</Text>
           <Text style={styles.kicker}>تجارب لا تُنسى في قلب الدوحة</Text>
         </View>
-        <TouchableOpacity onPress={() => void openPlace(`${VISIT_QATAR}/ar`)} style={styles.allButton}>
+        <TouchableOpacity onPress={() => void openPlace(VISIT_QATAR)} style={styles.allButton}>
           <Text style={styles.allText}>عرض الكل</Text>
           <Ionicons name="arrow-back" size={14} color="#8A6420" />
         </TouchableOpacity>

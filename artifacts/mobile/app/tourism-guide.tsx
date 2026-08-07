@@ -6,28 +6,28 @@ import { Stack } from 'expo-router';
 
 const categories = [
   { id: 'culture', label: '🏛️ معالم وثقافة', items: [
-    ['متحف الفن الإسلامي', 'تحف فنية من العالم الإسلامي', 'https://mia.org.qa/ar/', 'Islamic Art Museum Doha'],
-    ['متحف قطر الوطني', 'رحلة في تاريخ قطر وثقافتها', 'https://nmoq.org.qa/ar/', 'National Museum Qatar'],
-    ['متحف الفن الحديث (Mathaf)', 'الفن العربي الحديث والمعاصر', 'https://mathaf.org.qa/', 'Mathaf Doha'],
-    ['متحف 3-2-1 الرياضي', 'تجربة الرياضة والإنجاز', 'https://321qatar.org/', '321 Qatar Olympic Museum'],
-    ['مكتبة قطر الوطنية', 'معرفة وإلهام للجميع', 'https://www.qnl.qa/ar', 'Qatar National Library'],
+    ['متحف الفن الإسلامي', 'تحفة معمارية على الكورنيش بتصميم آي إم بي، يضم مقتنيات إسلامية تمتد لأكثر من 1400 عام.', 'https://mia.org.qa/ar/', 'Islamic Art Museum Doha'],
+    ['متحف قطر الوطني', 'صممه جان نوفيل على شكل وردة الصحراء الكريستالية ويروي تاريخ قطر.', 'https://nmoq.org.qa/ar/', 'National Museum Qatar'],
+    ['متحف الفن الحديث (متحف)', 'يقع في المدينة التعليمية ويضم مقتنيات الفن الحديث والمعاصر.', 'https://mathaf.org.qa/', 'Mathaf Doha'],
+    ['متحف 3-2-1 قطر الأولمبي والرياضي', 'من أكبر المتاحف الرياضية في العالم بجانب استاد خليفة.', 'https://321qatar.org/', '321 Qatar Olympic Museum'],
+    ['مكتبة قطر الوطنية', 'تحفة معمارية تضم أكثر من مليون كتاب ومخطوطة نادرة.', 'https://www.qnl.qa/ar', 'Qatar National Library'],
   ]},
   { id: 'nature', label: '🏜️ طبيعة ومغامرات', items: [
-    ['خور العديد', 'البحر يلتقي بالصحراء', 'https://visitqatar.com/ar', 'Inland Sea Qatar'],
-    ['الجزيرة الأرجوانية', 'طبيعة وطيور ومناظر هادئة', 'https://visitqatar.com/ar', 'Purple Island Qatar'],
-    ['كهف دحل المسفر', 'مغامرة في أعماق الصحراء', 'https://visitqatar.com/ar', 'Dahl Al Misfir Qatar'],
-    ['محمية الدوسري', 'حياة برية وتجربة عائلية', 'https://www.aldosari.qa/', 'Al Dosari Zoo Qatar'],
+    ['خور العديد (البحر الداخلي)', 'التقاء البحر بالعمق الصحراوي ومثالي للتخييم والسفاري.', 'https://visitqatar.com/ar', 'Inland Sea Qatar'],
+    ['جزيرة بن غنام (الجزيرة الأرجوانية)', 'تتميز بغابات القرم الطبيعية والتجديف بالكاياك.', 'https://visitqatar.com/ar', 'Purple Island Qatar'],
+    ['كهف دحل المسفر', 'تكوين طبيعي عميق وسط الصحراء.', 'https://visitqatar.com/ar', 'Dahl Al Misfir Qatar'],
+    ['محمية الدوسري (الشحانية)', 'محمية طبيعية وحديقة حيوان مخصصة للعائلات.', 'https://www.aldosari.qa/', 'Al Dosari Zoo Qatar'],
   ]},
   { id: 'leisure', label: '🎡 ترفيه وشواطئ', items: [
-    ['جزيرة المها', 'ترفيه شتوي وتجارب عائلية', 'https://www.almaha-island.com/', 'Al Maha Island Qatar'],
-    ['شاطئ 974 وقطيفان', 'شاطئ ومغامرات مائية', 'https://www.meryalwaterpark.com/', 'Meryal Waterpark Qatar'],
-    ['درب لوسيل', 'ممشى نابض بالحياة', 'https://www.lusail.com/', 'Lusail Boulevard Qatar'],
-    ['حديقة أسباير', 'مساحات خضراء ونشاطات مفتوحة', 'https://www.aspirezone.qa/', 'Aspire Park Qatar'],
+    ['جزيرة المها (Al Maha Island)', 'تضم مدينة ألعاب Lusail Winter Wonderland وأشهر المطاعم العالمية.', 'https://www.almaha-island.com/', 'Al Maha Island Qatar'],
+    ['شاطئ 974 وجزيرة قطيفان الشمالية', 'تضم مدينة الألعاب المائية Meryal Waterpark وشواطئ مجهزة.', 'https://www.meryalwaterpark.com/', 'Meryal Waterpark Qatar'],
+    ['درب لوسيل (Lusail Boulevard)', 'ممشى عصري فخم ومضيء بالشاشات التفاعلية.', 'https://www.lusail.com/', 'Lusail Boulevard Qatar'],
+    ['حديقة أسباير (Aspire Park)', 'أكبر حديقة بمسطحات خضراء مطلة على برج الشعلة.', 'https://www.aspirezone.qa/', 'Aspire Park Qatar'],
   ]},
   { id: 'shopping', label: '🛍️ أسواق وتسوق', items: [
-    ['سوق الوكرة القديم', 'تراث على الواجهة البحرية', 'https://visitqatar.com/ar', 'Souq Al Wakra Qatar'],
-    ['فيندوم مول وقطر مول', 'تسوق وترفيه فاخر', 'https://placevendomeqatar.com/', 'Place Vendome Qatar'],
-    ['براحة مشيرب', 'ساحة ثقافية في قلب الدوحة', 'https://www.msheireb.com/ar/', 'Barahat Msheireb'],
+    ['سوق الوكرة القديم', 'طراز تراثي على شاطئ البحر يضم مطاعم ومقاهي.', 'https://visitqatar.com/ar', 'Souq Al Wakra Qatar'],
+    ['فيندوم مول (Place Vendôme) وقطر مول', 'طراز باريسي فاخر بنافورات راقصة وقنوات مائية.', 'https://placevendomeqatar.com/', 'Place Vendome Qatar'],
+    ['حي براحة مشيرب', 'أكبر ميدان مغطى ومكيف في الهواء الطلق في الشرق الأوسط.', 'https://www.msheireb.com/ar/', 'Barahat Msheireb'],
   ]},
 ] as const;
 type CategoryId = (typeof categories)[number]['id'];

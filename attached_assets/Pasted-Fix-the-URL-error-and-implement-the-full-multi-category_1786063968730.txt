@@ -1,0 +1,66 @@
+Fix the "عرض الكل" URL error and implement the full multi-category "Qatar Tourism & Landmarks Guide" (دليل قطر السياحي) inside the app as follows:
+
+1. Fix "عرض الكل" Link Bug
+Update the header button link from [visitqatar.com/ar/ar](https://visitqatar.com/ar/ar) (which causes 404 Error) to [https://visitqatar.com/ar](https://visitqatar.com/ar) OR redirect the "عرض الكل" button to navigate directly to the internal Drawer Screen (QatarGuideScreen).
+
+2. Internal Navigation & Side Drawer Entry
+Add a menu item in the Drawer Menu: 🇶🇦 دليل معالم قطر السياحي.
+
+Tapping "عرض الكل" or the Drawer menu option opens a dedicated screen/modal: QatarGuideScreen.
+
+3. Full Guide Architecture & Categories (QatarGuideScreen)
+Organize the entire list into 4 Category Tabs / Accordions:
+
+1️⃣ معالم وثقافة (Culture & Museums):
+
+متحف الفن الإسلامي (MIA): تحفة معمارية على الكورنيش بتصميم آي إم بي، يضم مقتنيات إسلامية تمتد لأكثر من 1400 عام.
+
+متحف قطر الوطني (وردة الصحراء): صممه جان نوفيل على شكل وردة الصحراء الكريستالية ويروي تاريخ قطر.
+
+متحف الفن الحديث (متحف): يقع في المدينة التعليمية ويضم مقتنيات الفن الحديث والمعاصر.
+
+متحف 3-2-1 قطر الأولمبي والرياضي: من أكبر المتاحف الرياضية في العالم بجانب استاد خليفة.
+
+مكتبة قطر الوطنية: تحفة معمارية تضم أكثر من مليون كتاب ومخطوطة نادرة.
+
+2️⃣ طبيعة ومغامرات (Nature & Adventure):
+
+خور العديد (البحر الداخلي): التقاء البحر بالعمق الصحراوي ومثالي للتخييم والسفاري.
+
+جزيرة بن غنام (الجزيرة الأرجوانية): تتميز بغابات القرم الطبيعية والتجديف بالكاياك.
+
+كهف دحل المسفر: تكوين طبيعي عميق وسط الصحراء.
+
+محمية الدوسري (الشحانية): محمية طبيعية وحديقة حيوان مخصصة للعائلات.
+
+3️⃣ ترفيه وشواطئ (Leisure & Beachfronts):
+
+جزيرة المها (Al Maha Island): تضم مدينة ألعاب Lusail Winter Wonderland وأشهر المطاعم العالمية.
+
+شاطئ 974 وجزيرة قطيفان الشمالية: تضم مدينة الألعاب المائية Meryal Waterpark وشواطئ مجهزة.
+
+درب لوسيل (Lusail Boulevard): ممشى عصري فخم ومضيء بالشاشات التفاعلية.
+
+حديقة أسباير (Aspire Park): أكبر حديقة بمسطحات خضراء مطلة على برج الشعلة.
+
+4️⃣ أسواق وتسوق (Heritage & Malls):
+
+سوق الوكرة القديم: طراز تراثي على شاطئ البحر يضم مطاعم ومقاهي.
+
+فيندوم مول (Place Vendôme) وقطر مول: طراز باريسي فاخر بنافورات راقصة وقنوات مائية.
+
+حي براحة مشيرب: أكبر ميدان مغطى ومكيف في الهواء الطلق في الشرق الأوسط.
+
+4. Card Item Actions
+Each landmark card in the guide must have:
+
+High-res image background / official logo.
+
+Name & 1-line description.
+
+Button 1 (زيارة الموقع الرسمي): Launches official Arabic URL via expo-web-browser.
+
+Button 2 (الموقع على الخريطة): Opens direct Google Maps coordinates/link.
+
+5. Build Verification
+Run pnpm exec tsc --noEmit and confirm both the 404 link fix and full drawer guide screen render without errors.
