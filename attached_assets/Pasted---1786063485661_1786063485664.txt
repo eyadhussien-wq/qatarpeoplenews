@@ -1,0 +1,92 @@
+التنسيق المطلوب ممتاز جداً! دمج **صورة المعلم الخلفية** مع **الشعار الرسمي فوقها** يعطي طابعاً احترافياً وتفاعلياً يشبه كروت منصات السياحة العالمية مثل Visit Qatar.
+
+---
+
+### التوجيه المباشر والكامل لـ Replit Agent (انسخه وأرسله له):
+
+> `build_discover_qatar_interactive_carousel`
+> Add the **"Discover Qatar Landmarks" (`اكتشف معالم قطر`)** section to the home/main view component using an interactive card structure with custom logo overlays and Arabic official web links:
+> ---
+> 
+> 
+> ### 1. Placement & Layout
+> 
+> 
+> * **Position:** Directly below the 4-button Radio stream grid and above the "Deals & Offers" section.
+> * **Container:** Horizontal `ScrollView` with `showsHorizontalScrollIndicator={false}` and smooth scrolling padding.
+> * **Header:** Section title `🇶🇦 اكتشف معالم قطر` with maroon accent color and standard section margins.
+> 
+> 
+> ---
+> 
+> 
+> ### 2. Card Design Architecture
+> 
+> 
+> Each landmark card must have the following visual specs:
+> * **Dimensions:** `width: 180`, `height: 230`, `borderRadius: 16`, `overflow: 'hidden'`.
+> * **Background Layer:** Full-cover high-resolution landmark photo (`ImageBackground` with `resizeMode: 'cover'`).
+> * **Dark Gradient Overlay:** Linear gradient overlay at the bottom half to ensure title readability.
+> * **Logo Overlay:** Place the official landmark logo PNG in a clean container at the top corner of each card.
+> * **Card Footer:** Display the Arabic landmark name in bold white text with a subtle location icon.
+> 
+> 
+> ---
+> 
+> 
+> ### 3. Featured Landmarks Data & Official Arabic Links:
+> 
+> 
+> 1. **سوق واقف (Souq Waqif):**
+> * **URL:** `[https://souqwaqif.qa/](https://souqwaqif.qa/)`
+> * **Title:** `سوق واقف`
+> * **Image:** High-res photo of Souq Waqif police on Arabian horses / heritage alleyways.
+> 
+> 
+> 2. **حي كتارا الثقافي (Katara Cultural Village):**
+> * **URL:** `[https://www.katara.net/ar](https://www.katara.net/ar)`
+> * **Title:** `حي كتارا الثقافي`
+> 
+> 
+> 3. **مشيرب قلب الدوحة (Msheireb Downtown):**
+> * **URL:** `[https://www.msheireb.com/ar/](https://www.msheireb.com/ar/)`
+> * **Title:** `مشيرب قلب الدوحة`
+> 
+> 
+> 4. **متحف الفن الإسلامي (Museum of Islamic Art):**
+> * **URL:** `[https://mia.org.qa/ar/](https://mia.org.qa/ar/)`
+> * **Title:** `متحف الفن الإسلامي`
+> 
+> 
+> 5. **متحف قطر الوطني (National Museum of Qatar):**
+> * **URL:** `[https://nmoq.org.qa/ar/](https://nmoq.org.qa/ar/)`
+> * **Title:** `متحف قطر الوطني`
+> 
+> 
+> 6. **جزيرة اللؤلؤة (The Pearl Qatar):**
+> * **URL:** `[https://www.thepearlqatar.com/ar](https://www.thepearlqatar.com/ar)`
+> * **Title:** `جزيرة اللؤلؤة`
+> 
+> 
+> 
+> 
+> ---
+> 
+> 
+> ### 4. On Click Interaction
+> 
+> 
+> * Wrap each card in a `TouchableOpacity`.
+> * On press, execute `WebBrowser.openBrowserAsync(landmark.url)` using `expo-web-browser` so it opens the official Arabic portal smoothly inside the app without external browser redirects.
+> 
+> 
+> ---
+> 
+> 
+> ### 5. Build & Verification
+> 
+> 
+> * Run `pnpm exec tsc --noEmit`.
+> * Reload the Expo preview to confirm horizontal cards display correctly with background photos, top logos, and functional links.
+> 
+>

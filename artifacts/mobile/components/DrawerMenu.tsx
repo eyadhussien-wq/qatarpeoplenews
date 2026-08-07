@@ -25,6 +25,7 @@ import { useApp } from '@/context/AppContext';
 const DRAWER_WIDTH = 300;
 
 const MENU_ITEMS = [
+  { id: 'tourism', label: '🇶🇦 دليل معالم قطر السياحي', icon: 'map-outline' as const, route: '/tourism-guide' as const },
   { id: 'about', label: 'من نحن', icon: 'information-circle-outline' as const },
   { id: 'addad', label: 'أضف إعلانك', icon: 'megaphone-outline' as const, url: 'mailto:ads@ahlqatar.com' },
   { id: 'contact', label: 'اتصل بنا', icon: 'call-outline' as const, url: 'mailto:info@ahlqatar.com' },
