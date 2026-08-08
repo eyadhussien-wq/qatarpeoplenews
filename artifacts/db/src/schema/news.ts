@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, boolean, integer, jsonb, index } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const newsCategories = pgTable("news_categories", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -35,4 +35,4 @@ export const newsMedia = pgTable("news_media", {
   url: text("url").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}));
+});
