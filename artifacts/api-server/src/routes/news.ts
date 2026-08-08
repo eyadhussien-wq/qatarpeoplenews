@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, desc, eq, ilike } from "drizzle-orm";
+import { and, desc, eq, ilike, sql } from "drizzle-orm";
 import { db, news, newsCategories } from "@workspace/db";
 import { requireAdmin } from "./admin";
 
@@ -65,7 +65,8 @@ router.get("/news/:id", async (req, res, next) => {
   try {
     const [row] = await db.select({ id: news.id, title: news.title, slug: news.slug, excerpt: news.excerpt, content: news.content, coverImageUrl: news.coverImageUrl, videoUrl: news.videoUrl, categoryId: news.categoryId, status: news.status, isBreaking: news.isBreaking, views: news.views, publishedAt: news.publishedAt, createdAt: news.createdAt, updatedAt: news.updatedAt, category: { id: newsCategories.id, name: newsCategories.name, slug: newsCategories.slug } }).from(news).leftJoin(newsCategories, eq(news.categoryId, newsCategories.id)).where(eq(news.id, req.params.id)).limit(1);
     if (!row || row.status !== "published") return res.status(404).json({ error: "News not found" });
-    return res.json({ data: row });
+    await db.update(news).set({ views: sql`${news.views} + 1` }).where(eq(news.id, req.params.id));
+    return res.json({ data: { ...row, views: row.views + 1 } });
   } catch (error) { return next(error); }
 });
 
