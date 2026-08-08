@@ -6,6 +6,7 @@ import Header from '@/components/Header';
 import InfoBar from '@/components/InfoBar';
 import HeroCarousel from '@/components/HeroCarousel';
 import AdBanner from '@/components/AdBanner';
+import NewsSection from '@/components/NewsSection';
 import LiveTVSection from '@/components/LiveTVSection';
 import AffiliateGrid from '@/components/AffiliateGrid';
 import RadioSection from '@/components/RadioSection';
@@ -15,7 +16,6 @@ import Footer from '@/components/Footer';
 import StickyAdBanner from '@/components/StickyAdBanner';
 import DrawerMenu from '@/components/DrawerMenu';
 
-// Extra bottom padding to clear the sticky ad banner
 const STICKY_AD_HEIGHT = 64;
 
 export default function HomeScreen() {
@@ -26,10 +26,7 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Fixed header */}
       <Header />
-
-      {/* Main scrollable content */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: STICKY_AD_HEIGHT + bottomPad + 16 }]}
@@ -38,6 +35,7 @@ export default function HomeScreen() {
         <InfoBar />
         <HeroCarousel />
         <AdBanner />
+        <NewsSection />
         <LiveTVSection />
         <RadioSection />
         <DiscoverQatarSection />
@@ -45,24 +43,14 @@ export default function HomeScreen() {
         <AffiliateGrid />
         <Footer />
       </ScrollView>
-
-      {/* Sticky bottom ad */}
       <StickyAdBanner />
-
-      {/* Side drawer overlay */}
       <DrawerMenu />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    flexGrow: 1,
-  },
+  container: { flex: 1 },
+  scroll: { flex: 1 },
+  content: { flexGrow: 1 },
 });
