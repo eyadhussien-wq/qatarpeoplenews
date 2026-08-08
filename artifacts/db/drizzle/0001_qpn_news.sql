@@ -1,0 +1,2 @@
+-- Legacy placeholder. The canonical QPN database package is lib/db.
+-- News schema migration lives at lib/db/drizzle/0001_qpn_news.sql.
