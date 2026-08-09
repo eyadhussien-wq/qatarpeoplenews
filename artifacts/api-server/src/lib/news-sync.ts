@@ -1,19 +1,19 @@
 import { db } from "@workspace/db";
 import { news } from "@workspace/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 export type NewsSource = "QNA" | "الشرق" | "العرب";
 
 type FeedItem = { title: string; link: string; description: string | null; publishedAt: Date | null };
 
-const SOURCES: Array<{ name: NewsSource; url: string; kind: "rss" | "html" }> = [
-  { name: "الشرق", url: "https://al-sharq.com/rss/latestNews", kind: "rss" },
-  { name: "العرب", url: "https://alarab.qa/rss/latestNews", kind: "rss" },
-  { name: "QNA", url: "https://qna.org.qa/ar-QA/", kind: "html" },
+const SOURCES: Array<{ name: NewsSource; urls: string[]; kind: "rss" | "html" }> = [
+  { name: "الشرق", urls: ["https://al-sharq.com/rss/latestNews", "https://al-sharq.com/rss"], kind: "rss" },
+  { name: "العرب", urls: ["https://alarab.qa/rss/latestNews", "https://alarab.qa/rss"], kind: "rss" },
+  { name: "QNA", urls: ["https://qna.org.qa/ar-QA/"], kind: "html" },
 ];
 
 function decodeHtml(value: string) {
-  return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+/g, " ").trim();
+  return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n))).replace(/\s+/g, " ").trim();
 }
 function tag(xml: string, name: string) {
   const m = xml.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`, "i"));
@@ -33,15 +33,22 @@ function parseRss(xml: string): FeedItem[] {
 function parseQnaHtml(html: string): FeedItem[] {
   const results: FeedItem[] = [];
   const seen = new Set<string>();
-  const re = /href=["']([^"']*\/news\/news-details\?[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  for (const match of html.matchAll(re)) {
-    const link = new URL(match[1], "https://qna.org.qa").toString();
-    if (seen.has(link)) continue;
-    const title = decodeHtml(match[2]);
-    if (title.length < 8 || title.length > 300) continue;
-    seen.add(link);
-    results.push({ title, link, description: null, publishedAt: null });
-    if (results.length >= 20) break;
+  const patterns = [
+    /href=["']([^"']*(?:\/news\/news-details|\/news\/)[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi,
+    /href=["']([^"']+)["'][^>]*>([\s\S]*?(?:خبر|رئيس|قطر|الدوحة)[\s\S]*?)<\/a>/gi,
+  ];
+  for (const re of patterns) {
+    for (const match of html.matchAll(re)) {
+      let link: string;
+      try { link = new URL(match[1], "https://qna.org.qa").toString(); } catch { continue; }
+      if (seen.has(link)) continue;
+      const title = decodeHtml(match[2]);
+      if (title.length < 8 || title.length > 300) continue;
+      seen.add(link);
+      results.push({ title, link, description: null, publishedAt: null });
+      if (results.length >= 30) break;
+    }
+    if (results.length >= 30) break;
   }
   return results;
 }
@@ -49,13 +56,23 @@ function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 100) || `news-${Date.now()}`;
 }
 
+async function fetchSource(urls: string[]) {
+  let lastError = "Unable to fetch source";
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, { headers: { "user-agent": "Mozilla/5.0 (compatible; QatarPeopleNews/1.0)", accept: "application/rss+xml, application/xml, text/xml, text/html;q=0.9, */*;q=0.8" }, signal: AbortSignal.timeout(15000) });
+      if (!response.ok) { lastError = `HTTP ${response.status} from ${url}`; continue; }
+      return { body: await response.text(), url };
+    } catch (error) { lastError = error instanceof Error ? error.message : "Unknown fetch error"; }
+  }
+  throw new Error(lastError);
+}
+
 export async function syncNewsSources() {
   const summary: Array<{ source: NewsSource; fetched: number; inserted: number; skipped: number; error?: string }> = [];
   for (const source of SOURCES) {
     try {
-      const response = await fetch(source.url, { headers: { "user-agent": "QatarPeopleNews/1.0 NewsEngine" }, signal: AbortSignal.timeout(15000) });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const body = await response.text();
+      const { body } = await fetchSource(source.urls);
       const items = source.kind === "rss" ? parseRss(body) : parseQnaHtml(body);
       let inserted = 0;
       let skipped = 0;
