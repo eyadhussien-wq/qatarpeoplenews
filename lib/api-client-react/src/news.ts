@@ -8,6 +8,8 @@ export type NewsSummary = {
   excerpt: string | null;
   coverImageUrl: string | null;
   videoUrl: string | null;
+  sourceName: string | null;
+  sourceUrl: string | null;
   categoryId: string | null;
   status: "draft" | "published" | "archived";
   isBreaking: boolean;
