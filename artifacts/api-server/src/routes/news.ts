@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { and, desc, eq, ilike, sql } from "drizzle-orm";
-import { db, news, newsCategories } from "@workspace/db";
+import { db } from "@workspace/db";
+import { news, newsCategories } from "@workspace/db/schema";
 import { requireAdmin } from "./admin";
 
 const router = Router();
