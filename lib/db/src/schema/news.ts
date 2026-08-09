@@ -1,4 +1,4 @@
-import { boolean, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, text, timestamp, uuid, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const newsCategories = pgTable("news_categories", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -15,6 +15,8 @@ export const news = pgTable("news", {
   content: text("content").notNull(),
   coverImageUrl: text("cover_image_url"),
   videoUrl: text("video_url"),
+  sourceName: text("source_name"),
+  sourceUrl: text("source_url"),
   categoryId: uuid("category_id").references(() => newsCategories.id, { onDelete: "set null" }),
   status: text("status", { enum: ["draft", "published", "archived"] }).notNull().default("draft"),
   isBreaking: boolean("is_breaking").notNull().default(false),
@@ -26,6 +28,8 @@ export const news = pgTable("news", {
   statusIdx: index("news_status_idx").on(table.status),
   publishedIdx: index("news_published_at_idx").on(table.publishedAt),
   categoryIdx: index("news_category_idx").on(table.categoryId),
+  sourceIdx: index("news_source_idx").on(table.sourceName),
+  sourceUrlUnique: uniqueIndex("news_source_url_unique_idx").on(table.sourceUrl),
 }));
 
 export const newsMedia = pgTable("news_media", {
