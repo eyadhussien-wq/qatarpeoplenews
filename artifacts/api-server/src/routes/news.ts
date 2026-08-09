@@ -19,14 +19,16 @@ function validateNewsBody(body: unknown) {
   const excerpt = typeof input?.excerpt === "string" ? input.excerpt.trim().slice(0, 500) : null;
   const coverImageUrl = typeof input?.coverImageUrl === "string" ? input.coverImageUrl.trim() : null;
   const videoUrl = typeof input?.videoUrl === "string" ? input.videoUrl.trim() : null;
-  return { value: { title, content, status, categoryId, excerpt, coverImageUrl, videoUrl, isBreaking: input?.isBreaking === true } };
+  const sourceName = typeof input?.sourceName === "string" ? input.sourceName.trim().slice(0, 120) : null;
+  const sourceUrl = typeof input?.sourceUrl === "string" && /^https?:\/\//i.test(input.sourceUrl.trim()) ? input.sourceUrl.trim() : null;
+  return { value: { title, content, status, categoryId, excerpt, coverImageUrl, videoUrl, sourceName, sourceUrl, isBreaking: input?.isBreaking === true } };
 }
 
 router.get("/news", async (req, res, next) => {
   try {
     const limit = Math.min(Math.max(Number.parseInt(String(req.query.limit ?? "20"), 10) || 20, 1), 100);
     const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
-    const rows = await db.select({ id: news.id, title: news.title, slug: news.slug, excerpt: news.excerpt, coverImageUrl: news.coverImageUrl, videoUrl: news.videoUrl, categoryId: news.categoryId, status: news.status, isBreaking: news.isBreaking, views: news.views, publishedAt: news.publishedAt, createdAt: news.createdAt, updatedAt: news.updatedAt, categoryName: newsCategories.name, categorySlug: newsCategories.slug }).from(news).leftJoin(newsCategories, eq(news.categoryId, newsCategories.id)).where(and(eq(news.status, "published"), search ? ilike(news.title, `%${search}%`) : undefined)).orderBy(desc(news.isBreaking), desc(news.publishedAt), desc(news.createdAt)).limit(limit);
+    const rows = await db.select({ id: news.id, title: news.title, slug: news.slug, excerpt: news.excerpt, coverImageUrl: news.coverImageUrl, videoUrl: news.videoUrl, sourceName: news.sourceName, sourceUrl: news.sourceUrl, categoryId: news.categoryId, status: news.status, isBreaking: news.isBreaking, views: news.views, publishedAt: news.publishedAt, createdAt: news.createdAt, updatedAt: news.updatedAt, categoryName: newsCategories.name, categorySlug: newsCategories.slug }).from(news).leftJoin(newsCategories, eq(news.categoryId, newsCategories.id)).where(and(eq(news.status, "published"), search ? ilike(news.title, `%${search}%`) : undefined)).orderBy(desc(news.isBreaking), desc(news.publishedAt), desc(news.createdAt)).limit(limit);
     return res.json({ data: rows });
   } catch (error) { return next(error); }
 });
@@ -44,7 +46,7 @@ router.post("/admin/news", requireAdmin, async (req, res, next) => {
     const parsed = validateNewsBody(req.body);
     if ("error" in parsed) return res.status(400).json({ error: parsed.error });
     const { value } = parsed; const now = new Date();
-    const [created] = await db.insert(news).values({ title: value.title, slug: `${slugify(value.title)}-${Date.now()}`, content: value.content, excerpt: value.excerpt, coverImageUrl: value.coverImageUrl, videoUrl: value.videoUrl, categoryId: value.categoryId, status: value.status, isBreaking: value.isBreaking, publishedAt: value.status === "published" ? now : null, updatedAt: now }).returning();
+    const [created] = await db.insert(news).values({ ...value, title: value.title, slug: `${slugify(value.title)}-${Date.now()}`, content: value.content, status: value.status, publishedAt: value.status === "published" ? now : null, updatedAt: now }).returning();
     return res.status(201).json({ data: created });
   } catch (error) { return next(error); }
 });
@@ -63,7 +65,7 @@ router.post("/admin/news/categories", requireAdmin, async (req, res, next) => {
 
 router.get("/news/:id", async (req, res, next) => {
   try {
-    const [row] = await db.select({ id: news.id, title: news.title, slug: news.slug, excerpt: news.excerpt, content: news.content, coverImageUrl: news.coverImageUrl, videoUrl: news.videoUrl, categoryId: news.categoryId, status: news.status, isBreaking: news.isBreaking, views: news.views, publishedAt: news.publishedAt, createdAt: news.createdAt, updatedAt: news.updatedAt, category: { id: newsCategories.id, name: newsCategories.name, slug: newsCategories.slug } }).from(news).leftJoin(newsCategories, eq(news.categoryId, newsCategories.id)).where(eq(news.id, req.params.id)).limit(1);
+    const [row] = await db.select({ id: news.id, title: news.title, slug: news.slug, excerpt: news.excerpt, content: news.content, coverImageUrl: news.coverImageUrl, videoUrl: news.videoUrl, sourceName: news.sourceName, sourceUrl: news.sourceUrl, categoryId: news.categoryId, status: news.status, isBreaking: news.isBreaking, views: news.views, publishedAt: news.publishedAt, createdAt: news.createdAt, updatedAt: news.updatedAt, category: { id: newsCategories.id, name: newsCategories.name, slug: newsCategories.slug } }).from(news).leftJoin(newsCategories, eq(news.categoryId, newsCategories.id)).where(eq(news.id, req.params.id)).limit(1);
     if (!row || row.status !== "published") return res.status(404).json({ error: "News not found" });
     await db.update(news).set({ views: sql`${news.views} + 1` }).where(eq(news.id, req.params.id));
     return res.json({ data: { ...row, views: row.views + 1 } });
@@ -75,7 +77,7 @@ router.patch("/admin/news/:id", requireAdmin, async (req, res, next) => {
     const parsed = validateNewsBody(req.body);
     if ("error" in parsed) return res.status(400).json({ error: parsed.error });
     const { value } = parsed; const now = new Date();
-    const [updated] = await db.update(news).set({ title: value.title, content: value.content, excerpt: value.excerpt, coverImageUrl: value.coverImageUrl, videoUrl: value.videoUrl, categoryId: value.categoryId, status: value.status, isBreaking: value.isBreaking, publishedAt: value.status === "published" ? now : null, updatedAt: now }).where(eq(news.id, req.params.id)).returning();
+    const [updated] = await db.update(news).set({ ...value, title: value.title, content: value.content, status: value.status, publishedAt: value.status === "published" ? now : null, updatedAt: now }).where(eq(news.id, req.params.id)).returning();
     if (!updated) return res.status(404).json({ error: "News not found" });
     return res.json({ data: updated });
   } catch (error) { return next(error); }
