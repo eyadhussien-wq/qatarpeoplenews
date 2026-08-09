@@ -16,11 +16,11 @@ export default function NewsListScreen() {
     else router.replace("/");
   };
 
-  if (isLoading) return <View style={styles.center}><ActivityIndicator /></View>;
+  if (isLoading) return <View style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator /></View>;
   if (isError) return (
     <View style={[styles.center, { backgroundColor: colors.background }]}>
       <Pressable onPress={goBack} style={styles.backButton} accessibilityRole="button" accessibilityLabel="رجوع">
-        <Text style={[styles.backText, { color: colors.text }]}>‹ رجوع</Text>
+        <Text style={[styles.backText, { color: colors.text }]}>‹</Text>
       </Pressable>
       <Text style={{ color: colors.text }}>تعذر تحميل الأخبار حالياً.</Text>
     </View>
@@ -28,10 +28,10 @@ export default function NewsListScreen() {
 
   return <View style={{ flex: 1, backgroundColor: colors.background }}>
     <View style={styles.topBar}>
-      <Pressable onPress={goBack} style={styles.backButton} accessibilityRole="button" accessibilityLabel="رجوع">
-        <Text style={[styles.backText, { color: colors.text }]}>‹ رجوع</Text>
-      </Pressable>
       <Text style={[styles.title, { color: colors.text }]}>آخر الأخبار</Text>
+      <Pressable onPress={goBack} style={styles.backButton} accessibilityRole="button" accessibilityLabel="رجوع">
+        <Text style={[styles.backText, { color: colors.text }]}>‹</Text>
+      </Pressable>
     </View>
     <FlatList
       style={{ backgroundColor: colors.background }}
@@ -54,8 +54,8 @@ export default function NewsListScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 },
-  backButton: { paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10 },
-  backText: { fontSize: 16, fontWeight: "800" },
+  backButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 21 },
+  backText: { fontSize: 32, fontWeight: "500", lineHeight: 36 },
   list: { padding: 16, gap: 14 },
   title: { fontSize: 28, fontWeight: "900", marginBottom: 8 },
   item: { flexDirection: "row", gap: 12, padding: 12, borderRadius: 14, backgroundColor: "#FFFFFF" },
