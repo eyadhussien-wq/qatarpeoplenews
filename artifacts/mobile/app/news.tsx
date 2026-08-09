@@ -11,29 +11,51 @@ export default function NewsListScreen() {
   const { data, isLoading, isError } = useQuery({ queryKey: ["published-news", { limit: 100 }], queryFn: () => listPublishedNews({ limit: 100 }), staleTime: 60_000 });
   const items = data?.data ?? [];
 
-  if (isLoading) return <View style={styles.center}><ActivityIndicator /></View>;
-  if (isError) return <View style={styles.center}><Text style={{ color: colors.text }}>تعذر تحميل الأخبار حالياً.</Text></View>;
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/");
+  };
 
-  return <FlatList
-    style={{ backgroundColor: colors.background }}
-    contentContainerStyle={styles.list}
-    data={items}
-    keyExtractor={(item) => item.id}
-    ListHeaderComponent={<Text style={[styles.title, { color: colors.text }]}>آخر الأخبار</Text>}
-    ListEmptyComponent={<Text style={{ color: colors.text }}>لا توجد أخبار منشورة حالياً.</Text>}
-    renderItem={({ item }) => <Pressable style={styles.item} onPress={() => router.push({ pathname: "/news/[id]", params: { id: item.id } })}>
-      {item.coverImageUrl ? <Image source={{ uri: item.coverImageUrl }} style={styles.image} /> : <View style={[styles.image, styles.placeholder]} />}
-      <View style={styles.body}>
-        {item.isBreaking ? <Text style={styles.breaking}>عاجل</Text> : null}
-        <Text style={[styles.itemTitle, { color: colors.text }]}>{item.title}</Text>
-        {item.excerpt ? <Text numberOfLines={3} style={[styles.excerpt, { color: colors.text }]}>{item.excerpt}</Text> : null}
-      </View>
-    </Pressable>}
-  />;
+  if (isLoading) return <View style={styles.center}><ActivityIndicator /></View>;
+  if (isError) return (
+    <View style={[styles.center, { backgroundColor: colors.background }]}>
+      <Pressable onPress={goBack} style={styles.backButton} accessibilityRole="button" accessibilityLabel="رجوع">
+        <Text style={[styles.backText, { color: colors.text }]}>‹ رجوع</Text>
+      </Pressable>
+      <Text style={{ color: colors.text }}>تعذر تحميل الأخبار حالياً.</Text>
+    </View>
+  );
+
+  return <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={styles.topBar}>
+      <Pressable onPress={goBack} style={styles.backButton} accessibilityRole="button" accessibilityLabel="رجوع">
+        <Text style={[styles.backText, { color: colors.text }]}>‹ رجوع</Text>
+      </Pressable>
+      <Text style={[styles.title, { color: colors.text }]}>آخر الأخبار</Text>
+    </View>
+    <FlatList
+      style={{ backgroundColor: colors.background }}
+      contentContainerStyle={styles.list}
+      data={items}
+      keyExtractor={(item) => item.id}
+      ListEmptyComponent={<Text style={{ color: colors.text }}>لا توجد أخبار منشورة حالياً.</Text>}
+      renderItem={({ item }) => <Pressable style={styles.item} onPress={() => router.push({ pathname: "/news/[id]", params: { id: item.id } })}>
+        {item.coverImageUrl ? <Image source={{ uri: item.coverImageUrl }} style={styles.image} /> : <View style={[styles.image, styles.placeholder]} />}
+        <View style={styles.body}>
+          {item.isBreaking ? <Text style={styles.breaking}>عاجل</Text> : null}
+          <Text style={[styles.itemTitle, { color: colors.text }]}>{item.title}</Text>
+          {item.excerpt ? <Text numberOfLines={3} style={[styles.excerpt, { color: colors.text }]}>{item.excerpt}</Text> : null}
+        </View>
+      </Pressable>}
+    />
+  </View>;
 }
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 },
+  backButton: { paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10 },
+  backText: { fontSize: 16, fontWeight: "800" },
   list: { padding: 16, gap: 14 },
   title: { fontSize: 28, fontWeight: "900", marginBottom: 8 },
   item: { flexDirection: "row", gap: 12, padding: 12, borderRadius: 14, backgroundColor: "#FFFFFF" },
