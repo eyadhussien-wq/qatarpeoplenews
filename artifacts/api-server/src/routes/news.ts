@@ -4,10 +4,14 @@ import { db } from "@workspace/db";
 import { news, newsCategories } from "@workspace/db/schema";
 import { requireAdmin } from "./admin";
 
+type NewsStatus = "draft" | "published" | "archived";
 const router = Router();
 
 function slugify(value: string) {
   return value.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 120) || `news-${Date.now()}`;
+}
+function paramId(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
 }
 function validateNewsBody(body: unknown) {
   const input = body as Record<string, unknown> | null;
@@ -15,7 +19,7 @@ function validateNewsBody(body: unknown) {
   const content = typeof input?.content === "string" ? input.content.trim() : "";
   if (title.length < 3 || title.length > 240) return { error: "Title must be between 3 and 240 characters" };
   if (!content) return { error: "Content is required" };
-  const status = input?.status === "published" || input?.status === "archived" || input?.status === "draft" ? input.status : "draft";
+  const status: NewsStatus = input?.status === "published" || input?.status === "archived" || input?.status === "draft" ? input.status : "draft";
   const categoryId = typeof input?.categoryId === "string" && input.categoryId.length > 0 ? input.categoryId : null;
   const excerpt = typeof input?.excerpt === "string" ? input.excerpt.trim().slice(0, 500) : null;
   const coverImageUrl = typeof input?.coverImageUrl === "string" ? input.coverImageUrl.trim() : null;
@@ -47,7 +51,7 @@ router.post("/admin/news", requireAdmin, async (req, res, next) => {
     const parsed = validateNewsBody(req.body);
     if ("error" in parsed) return res.status(400).json({ error: parsed.error });
     const { value } = parsed; const now = new Date();
-    const [created] = await db.insert(news).values({ ...value, title: value.title, slug: `${slugify(value.title)}-${Date.now()}`, content: value.content, status: value.status, publishedAt: value.status === "published" ? now : null, updatedAt: now }).returning();
+    const [created] = await db.insert(news).values({ ...value, slug: `${slugify(value.title)}-${Date.now()}`, publishedAt: value.status === "published" ? now : null, updatedAt: now }).returning();
     return res.status(201).json({ data: created });
   } catch (error) { return next(error); }
 });
@@ -66,26 +70,29 @@ router.post("/admin/news/categories", requireAdmin, async (req, res, next) => {
 
 router.get("/news/:id", async (req, res, next) => {
   try {
-    const [row] = await db.select({ id: news.id, title: news.title, slug: news.slug, excerpt: news.excerpt, content: news.content, coverImageUrl: news.coverImageUrl, videoUrl: news.videoUrl, sourceName: news.sourceName, sourceUrl: news.sourceUrl, categoryId: news.categoryId, status: news.status, isBreaking: news.isBreaking, views: news.views, publishedAt: news.publishedAt, createdAt: news.createdAt, updatedAt: news.updatedAt, category: { id: newsCategories.id, name: newsCategories.name, slug: newsCategories.slug } }).from(news).leftJoin(newsCategories, eq(news.categoryId, newsCategories.id)).where(eq(news.id, req.params.id)).limit(1);
+    const id = paramId(req.params.id);
+    const [row] = await db.select({ id: news.id, title: news.title, slug: news.slug, excerpt: news.excerpt, content: news.content, coverImageUrl: news.coverImageUrl, videoUrl: news.videoUrl, sourceName: news.sourceName, sourceUrl: news.sourceUrl, categoryId: news.categoryId, status: news.status, isBreaking: news.isBreaking, views: news.views, publishedAt: news.publishedAt, createdAt: news.createdAt, updatedAt: news.updatedAt, category: { id: newsCategories.id, name: newsCategories.name, slug: newsCategories.slug } }).from(news).leftJoin(newsCategories, eq(news.categoryId, newsCategories.id)).where(eq(news.id, id)).limit(1);
     if (!row || row.status !== "published") return res.status(404).json({ error: "News not found" });
-    await db.update(news).set({ views: sql`${news.views} + 1` }).where(eq(news.id, req.params.id));
+    await db.update(news).set({ views: sql`${news.views} + 1` }).where(eq(news.id, id));
     return res.json({ data: { ...row, views: row.views + 1 } });
   } catch (error) { return next(error); }
 });
 
 router.patch("/admin/news/:id", requireAdmin, async (req, res, next) => {
   try {
+    const id = paramId(req.params.id);
     const parsed = validateNewsBody(req.body);
     if ("error" in parsed) return res.status(400).json({ error: parsed.error });
     const { value } = parsed; const now = new Date();
-    const [updated] = await db.update(news).set({ ...value, title: value.title, content: value.content, status: value.status, publishedAt: value.status === "published" ? now : null, updatedAt: now }).where(eq(news.id, req.params.id)).returning();
+    const [updated] = await db.update(news).set({ ...value, status: value.status, publishedAt: value.status === "published" ? now : null, updatedAt: now }).where(eq(news.id, id)).returning();
     if (!updated) return res.status(404).json({ error: "News not found" });
     return res.json({ data: updated });
   } catch (error) { return next(error); }
 });
 router.delete("/admin/news/:id", requireAdmin, async (req, res, next) => {
   try {
-    const [updated] = await db.update(news).set({ status: "archived", updatedAt: new Date() }).where(eq(news.id, req.params.id)).returning({ id: news.id });
+    const id = paramId(req.params.id);
+    const [updated] = await db.update(news).set({ status: "archived", updatedAt: new Date() }).where(eq(news.id, id)).returning({ id: news.id });
     if (!updated) return res.status(404).json({ error: "News not found" });
     return res.json({ ok: true, id: updated.id });
   } catch (error) { return next(error); }
