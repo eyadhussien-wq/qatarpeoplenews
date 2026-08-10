@@ -6,6 +6,7 @@ import Header from '@/components/Header';
 import InfoBar from '@/components/InfoBar';
 import HeroCarousel from '@/components/HeroCarousel';
 import AdBanner from '@/components/AdBanner';
+import OffersBanner from '@/components/OffersBanner';
 import NewsSection from '@/components/NewsSection';
 import LiveTVSection from '@/components/LiveTVSection';
 import AffiliateGrid from '@/components/AffiliateGrid';
@@ -27,14 +28,11 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: STICKY_AD_HEIGHT + bottomPad + 16 }]}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: STICKY_AD_HEIGHT + bottomPad + 16 }]} showsVerticalScrollIndicator={false}>
         <InfoBar />
         <HeroCarousel />
         <AdBanner />
+        <OffersBanner />
         <NewsSection />
         <LiveTVSection />
         <RadioSection />
@@ -49,8 +47,4 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll: { flex: 1 },
-  content: { flexGrow: 1 },
-});
+const styles = StyleSheet.create({ container: { flex: 1 }, scroll: { flex: 1 }, content: { flexGrow: 1 } });
