@@ -39,8 +39,6 @@ jobs:
           pnpm --version | grep -F '10.26.1'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Workspace diagnostics
-        run: pnpm -r exec pwd
       - name: Typecheck
         run: pnpm typecheck
 
