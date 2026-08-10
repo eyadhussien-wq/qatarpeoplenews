@@ -2,22 +2,33 @@ import { db } from "@workspace/db";
 import { news } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
-export type NewsSource = "QNA" | "الجزيرة" | "الشرق" | "العرب";
+export type NewsSource = "QNA" | "الجزيرة" | "الشرق" | "العرب" | "لوسيل" | "الوطن" | "الديوان الأميري";
+export type NewsSourceKind = "rss" | "html";
 
-type FeedItem = { title: string; link: string; description: string | null; publishedAt: Date | null };
+type FeedItem = { title: string; link: string; description: string | null; publishedAt: Date | null; isBreaking: boolean };
+type SourceConfig = { name: NewsSource; urls: string[]; kind: NewsSourceKind; official: boolean; princeNews?: boolean };
 
-const SOURCES: Array<{ name: NewsSource; urls: string[]; kind: "rss" | "html" }> = [
-  { name: "QNA", urls: ["https://qna.org.qa/ar-QA/"], kind: "html" },
-  // Al Jazeera currently exposes newsletters and other feeds/services publicly,
-  // but no current official general-news RSS endpoint was found. Keep this as
-  // an official-site adapter so it can be enabled when a supported feed is confirmed.
-  { name: "الجزيرة", urls: ["https://www.aljazeera.net/"], kind: "html" },
-  { name: "الشرق", urls: ["https://al-sharq.com/rss/latestNews", "https://al-sharq.com/rss"], kind: "rss" },
-  { name: "العرب", urls: ["https://alarab.qa/rss/latestNews", "https://alarab.qa/rss"], kind: "rss" },
+export const NEWS_SOURCE_CONFIG: SourceConfig[] = [
+  { name: "QNA", urls: ["https://qna.org.qa/ar-QA/"], kind: "html", official: true },
+  // No current official general-news RSS endpoint was confirmed; keep the official site adapter.
+  { name: "الجزيرة", urls: ["https://www.aljazeera.net/"], kind: "html", official: true },
+  { name: "الشرق", urls: ["https://al-sharq.com/rss/latestNews", "https://al-sharq.com/rss"], kind: "rss", official: true },
+  { name: "العرب", urls: ["https://alarab.qa/rss/latestNews", "https://alarab.qa/rss"], kind: "rss", official: true },
+  // These are enabled as official-site adapters until a current official RSS endpoint is verified.
+  { name: "لوسيل", urls: ["https://lusailnews.net/"], kind: "html", official: true },
+  { name: "الوطن", urls: ["https://www.al-watan.com/"], kind: "html", official: true },
+  // Primary source for HH The Amir news. Never substitute a newspaper re-publication.
+  { name: "الديوان الأميري", urls: ["https://diwan.gov.qa/ar-QA/Briefing-Room/News?sc_lang=ar-QA", "https://www.diwan.gov.qa/ar-QA/briefing-room/news"], kind: "html", official: true, princeNews: true },
 ];
 
 function decodeHtml(value: string) {
-  return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n))).replace(/\s+/g, " ").trim();
+  return value
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/\s+/g, " ").trim();
 }
 function tag(xml: string, name: string) {
   const m = xml.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`, "i"));
@@ -30,52 +41,49 @@ function parseDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
+function looksBreaking(title: string) {
+  return /عاجل|طارئ|الآن|هام جداً|urgent|breaking/i.test(title);
+}
 function parseRss(xml: string): FeedItem[] {
-  const blocks = allBlocks(xml, "item");
-  return blocks.map((block) => ({ title: tag(block, "title"), link: tag(block, "link"), description: tag(block, "description") || null, publishedAt: parseDate(tag(block, "pubDate") || tag(block, "published") || tag(block, "date")) })).filter((item) => item.title && /^https?:\/\//i.test(item.link));
+  return allBlocks(xml, "item").map((block) => ({
+    title: tag(block, "title"), link: tag(block, "link"), description: tag(block, "description") || null,
+    publishedAt: parseDate(tag(block, "pubDate") || tag(block, "published") || tag(block, "date")),
+    isBreaking: looksBreaking(tag(block, "title")),
+  })).filter((item) => item.title && /^https?:\/\//i.test(item.link));
 }
-function parseQnaHtml(html: string): FeedItem[] {
+function parseAnchors(html: string, baseUrl: string, linkPattern: RegExp, max = 40): FeedItem[] {
   const results: FeedItem[] = [];
   const seen = new Set<string>();
-  const patterns = [
-    /href=["']([^"']*(?:\/news\/news-details|\/news\/)[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi,
-    /href=["']([^"']+)["'][^>]*>([\s\S]*?(?:خبر|رئيس|قطر|الدوحة)[\s\S]*?)<\/a>/gi,
-  ];
-  for (const re of patterns) {
-    for (const match of html.matchAll(re)) {
-      let link: string;
-      try { link = new URL(match[1], "https://qna.org.qa").toString(); } catch { continue; }
-      if (seen.has(link)) continue;
-      const title = decodeHtml(match[2]);
-      if (title.length < 8 || title.length > 300) continue;
-      seen.add(link);
-      results.push({ title, link, description: null, publishedAt: null });
-      if (results.length >= 30) break;
-    }
-    if (results.length >= 30) break;
-  }
-  return results;
-}
-function parseAlJazeeraHtml(html: string): FeedItem[] {
-  const results: FeedItem[] = [];
-  const seen = new Set<string>();
-  const pattern = /href=["']([^"']*\/news\/[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  for (const match of html.matchAll(pattern)) {
+  for (const match of html.matchAll(linkPattern)) {
     let link: string;
-    try { link = new URL(match[1], "https://www.aljazeera.net").toString(); } catch { continue; }
+    try { link = new URL(match[1], baseUrl).toString(); } catch { continue; }
     if (seen.has(link)) continue;
     const title = decodeHtml(match[2]);
-    if (title.length < 12 || title.length > 300) continue;
+    if (title.length < 8 || title.length > 320) continue;
     seen.add(link);
-    results.push({ title, link, description: null, publishedAt: null });
-    if (results.length >= 30) break;
+    results.push({ title, link, description: null, publishedAt: null, isBreaking: looksBreaking(title) });
+    if (results.length >= max) break;
   }
   return results;
+}
+function parseQnaHtml(html: string): FeedItem[] {
+  return parseAnchors(html, "https://qna.org.qa", /href=["']([^"']*(?:\/news\/news-details|\/news\/)[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi);
+}
+function parseAlJazeeraHtml(html: string): FeedItem[] {
+  return parseAnchors(html, "https://www.aljazeera.net", /href=["']([^"']*\/news\/[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi);
+}
+function parseLusailHtml(html: string): FeedItem[] {
+  return parseAnchors(html, "https://lusailnews.net", /href=["']([^"']*\/article\/[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi);
+}
+function parseWatanHtml(html: string): FeedItem[] {
+  return parseAnchors(html, "https://www.al-watan.com", /href=["']([^"']*(?:\/article\/|\/news\/)[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi);
+}
+function parseDiwanHtml(html: string): FeedItem[] {
+  return parseAnchors(html, "https://diwan.gov.qa", /href=["']([^"']*\/briefing-room\/news[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi, 50);
 }
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 100) || `news-${Date.now()}`;
 }
-
 async function fetchSource(urls: string[]) {
   let lastError = "Unable to fetch source";
   for (const url of urls) {
@@ -87,24 +95,46 @@ async function fetchSource(urls: string[]) {
   }
   throw new Error(lastError);
 }
+function parseSource(source: SourceConfig, body: string): FeedItem[] {
+  if (source.kind === "rss") return parseRss(body);
+  switch (source.name) {
+    case "QNA": return parseQnaHtml(body);
+    case "الجزيرة": return parseAlJazeeraHtml(body);
+    case "لوسيل": return parseLusailHtml(body);
+    case "الوطن": return parseWatanHtml(body);
+    case "الديوان الأميري": return parseDiwanHtml(body);
+    default: return [];
+  }
+}
 
 export async function syncNewsSources() {
-  const summary: Array<{ source: NewsSource; fetched: number; inserted: number; skipped: number; error?: string }> = [];
-  for (const source of SOURCES) {
+  const summary: Array<{ source: NewsSource; kind: NewsSourceKind; official: boolean; princeNews: boolean; fetched: number; inserted: number; skipped: number; error?: string }> = [];
+  for (const source of NEWS_SOURCE_CONFIG) {
     try {
       const { body } = await fetchSource(source.urls);
-      const items = source.kind === "rss" ? parseRss(body) : source.name === "QNA" ? parseQnaHtml(body) : parseAlJazeeraHtml(body);
+      const items = parseSource(source, body);
       let inserted = 0;
       let skipped = 0;
       for (const item of items) {
         const existing = await db.select({ id: news.id }).from(news).where(eq(news.sourceUrl, item.link)).limit(1);
         if (existing.length) { skipped++; continue; }
-        await db.insert(news).values({ title: item.title, slug: `${slugify(item.title)}-${Date.now()}-${inserted}`, excerpt: item.description, content: item.description || item.title, sourceName: source.name, sourceUrl: item.link, status: "published", isBreaking: false, publishedAt: item.publishedAt ?? new Date(), updatedAt: new Date() });
+        await db.insert(news).values({
+          title: item.title,
+          slug: `${slugify(item.title)}-${Date.now()}-${inserted}`,
+          excerpt: item.description,
+          content: item.description || item.title,
+          sourceName: source.name,
+          sourceUrl: item.link,
+          status: "published",
+          isBreaking: item.isBreaking,
+          publishedAt: item.publishedAt ?? new Date(),
+          updatedAt: new Date(),
+        });
         inserted++;
       }
-      summary.push({ source: source.name, fetched: items.length, inserted, skipped });
+      summary.push({ source: source.name, kind: source.kind, official: source.official, princeNews: Boolean(source.princeNews), fetched: items.length, inserted, skipped });
     } catch (error) {
-      summary.push({ source: source.name, fetched: 0, inserted: 0, skipped: 0, error: error instanceof Error ? error.message : "Unknown error" });
+      summary.push({ source: source.name, kind: source.kind, official: source.official, princeNews: Boolean(source.princeNews), fetched: 0, inserted: 0, skipped: 0, error: error instanceof Error ? error.message : "Unknown error" });
     }
   }
   return summary;
