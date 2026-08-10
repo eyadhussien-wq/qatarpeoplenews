@@ -17,10 +17,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { AppProvider } from '@/context/AppContext';
 import { setBaseUrl } from '@workspace/api-client-react';
 
-// Allow RTL layout for Arabic content
 I18nManager.allowRTL(true);
 
-// Wire up API base URL for authenticated calls
 if (process.env.EXPO_PUBLIC_DOMAIN) {
   setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 }
@@ -34,6 +32,7 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="admin" options={{ headerShown: false }} />
+      <Stack.Screen name="auth" options={{ headerShown: false }} />
     </Stack>
   );
 }
