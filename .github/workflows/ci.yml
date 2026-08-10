@@ -90,3 +90,10 @@ jobs:
           test -f artifacts/mobile/app/news.tsx
           test -f 'artifacts/mobile/app/news/[id].tsx'
           echo "QPN News Engine, Community, Events, Jobs, Admin and News UI modules are present."
+
+  ci-trigger-probe:
+    name: CI trigger probe
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm workflow trigger
+        run: echo "QPN CI trigger reached GitHub Actions successfully."
