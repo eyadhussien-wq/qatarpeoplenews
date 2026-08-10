@@ -15,6 +15,7 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppProvider } from '@/context/AppContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { setBaseUrl } from '@workspace/api-client-react';
 
 I18nManager.allowRTL(true);
@@ -46,9 +47,7 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
+    if (fontsLoaded || fontError) SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) return null;
@@ -59,9 +58,11 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
-              <AppProvider>
-                <RootLayoutNav />
-              </AppProvider>
+              <ThemeProvider>
+                <AppProvider>
+                  <RootLayoutNav />
+                </AppProvider>
+              </ThemeProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>
