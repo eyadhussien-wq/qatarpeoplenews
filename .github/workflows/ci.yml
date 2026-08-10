@@ -68,24 +68,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.26.1
-          run_install: false
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Verify critical application files
+      - name: Verify critical QPN modules
         run: |
+          set -e
           test -f artifacts/api-server/src/lib/news-sync.ts
           test -f artifacts/api-server/src/routes/news-sync.ts
           test -f artifacts/api-server/src/routes/admin.ts
           test -f artifacts/api-server/src/routes/admin-news.ts
           test -f artifacts/api-server/src/routes/news.ts
           test -f lib/db/src/schema/news.ts
-          echo "QPN critical News Engine/Admin files are present."
+          test -f artifacts/mobile/app/community.tsx
+          test -f artifacts/mobile/app/events.tsx
+          test -f artifacts/mobile/app/jobs.tsx
+          test -f artifacts/mobile/app/news.tsx
+          test -f artifacts/mobile/app/news/[id].tsx
+          echo "QPN News Engine, Community, Events, Jobs, Admin and News UI modules are present."
