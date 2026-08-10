@@ -1,24 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 
 const DRAWER_WIDTH = 300;
+const NAV_ICON_COLOR = '#B9A7E8';
+const ACTIVE_ICON_COLOR = '#A58AE0';
+
 type MenuItem = { id: string; label: string; icon: React.ComponentProps<typeof Ionicons>['name']; route: string };
 
 const MAIN_ITEMS: MenuItem[] = [
   { id: 'home', label: 'الرئيسية', icon: 'home-outline', route: '/' },
   { id: 'news', label: 'الأخبار', icon: 'newspaper-outline', route: '/news' },
   { id: 'live', label: 'البث المباشر', icon: 'tv-outline', route: '/live' },
-  { id: 'offers', label: 'عروض قطر', icon: 'gift-outline', route: '/offers' },
+  { id: 'events', label: 'فعاليات قطر', icon: 'calendar-outline', route: '/events' },
   { id: 'community', label: 'المجتمع', icon: 'people-outline', route: '/community' },
-  { id: 'video', label: 'الفيديو', icon: 'videocam-outline', route: '/videos' },
+  { id: 'video', label: 'مقاطع فيديو', icon: 'videocam-outline', route: '/videos' },
   { id: 'jobs', label: 'عروض وظائف', icon: 'briefcase-outline', route: '/jobs' },
 ];
 
@@ -26,12 +30,20 @@ export default function DrawerMenu() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const pathname = usePathname();
   const { isDrawerOpen, setDrawerOpen } = useApp();
   const { themeMode, setThemeMode } = useTheme();
   const isWeb = Platform.OS === 'web';
   const [mounted, setMounted] = useState(false);
+  const [language, setLanguage] = useState<'ar' | 'en'>('ar');
   const translateX = useSharedValue(DRAWER_WIDTH);
   const backdropOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    AsyncStorage.getItem('qpn-language').then(value => {
+      if (value === 'en' || value === 'ar') setLanguage(value);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (isDrawerOpen) {
@@ -58,6 +70,12 @@ export default function DrawerMenu() {
     setTimeout(() => router.push(route as Parameters<typeof router.push>[0]), 260);
   };
 
+  const toggleLanguage = async () => {
+    const next = language === 'ar' ? 'en' : 'ar';
+    setLanguage(next);
+    await AsyncStorage.setItem('qpn-language', next);
+  };
+
   const openUrl = (url: string) => {
     if (isWeb) window.open(url, '_blank');
     else Linking.openURL(url);
@@ -68,7 +86,7 @@ export default function DrawerMenu() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]} pointerEvents={isDrawerOpen ? 'auto' : 'none'}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={close} />
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={close} activeOpacity={1} />
       </Animated.View>
 
       <Animated.ScrollView
@@ -92,18 +110,36 @@ export default function DrawerMenu() {
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>التنقل</Text>
 
-        {MAIN_ITEMS.map((item, index) => (
-          <TouchableOpacity key={item.id} style={[styles.menuItem, index === 0 && styles.firstItem]} onPress={() => go(item.route)} activeOpacity={0.72}>
-            <Ionicons name={item.icon} size={21} color={colors.primary} />
-            <Text style={[styles.menuText, { color: colors.text, fontFamily: 'Inter_600SemiBold' }]}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
+        {MAIN_ITEMS.map(item => {
+          const active = item.route === '/' ? pathname === '/' : pathname.startsWith(item.route);
+          return (
+            <TouchableOpacity
+              key={item.id}
+              style={[styles.menuItem, active && { backgroundColor: 'rgba(185,167,232,0.13)' }]}
+              onPress={() => go(item.route)}
+              activeOpacity={0.72}
+            >
+              <Ionicons name={item.icon} size={21} color={active ? ACTIVE_ICON_COLOR : NAV_ICON_COLOR} />
+              <Text style={[styles.menuText, { color: colors.text, fontFamily: 'Inter_600SemiBold' }]}>{item.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
 
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
-        <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>الإعدادات</Text>
+        <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>الحساب والتطبيق</Text>
+
+        <TouchableOpacity style={styles.settingItem} onPress={() => go('/auth')} activeOpacity={0.7}>
+          <Ionicons name="person-outline" size={20} color={NAV_ICON_COLOR} />
+          <Text style={[styles.menuText, { color: colors.text, fontFamily: 'Inter_500Medium' }]}>تسجيل الدخول</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.settingItem} onPress={toggleLanguage} activeOpacity={0.7}>
+          <Ionicons name="language-outline" size={20} color={NAV_ICON_COLOR} />
+          <Text style={[styles.menuText, { color: colors.text, fontFamily: 'Inter_500Medium' }]}>العربية / English</Text>
+        </TouchableOpacity>
 
         <View style={styles.settingRow}>
-          <Ionicons name="moon-outline" size={20} color={colors.primary} />
+          <Ionicons name="moon-outline" size={20} color={NAV_ICON_COLOR} />
           <Text style={[styles.menuText, { color: colors.text, fontFamily: 'Inter_500Medium' }]}>المظهر</Text>
         </View>
         <View style={[styles.segment, { backgroundColor: colors.muted }]}>
@@ -113,18 +149,18 @@ export default function DrawerMenu() {
             ['system', 'النظام', 'phone-portrait-outline'],
           ] as const).map(([mode, label, icon]) => (
             <TouchableOpacity key={mode} onPress={() => setThemeMode(mode)} style={[styles.segmentButton, themeMode === mode && { backgroundColor: colors.card }]} activeOpacity={0.75}>
-              <Ionicons name={icon} size={15} color={themeMode === mode ? colors.primary : colors.mutedForeground} />
-              <Text style={[styles.segmentText, { color: themeMode === mode ? colors.primary : colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{label}</Text>
+              <Ionicons name={icon} size={15} color={themeMode === mode ? ACTIVE_ICON_COLOR : colors.mutedForeground} />
+              <Text style={[styles.segmentText, { color: themeMode === mode ? ACTIVE_ICON_COLOR : colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>{label}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
         <TouchableOpacity style={styles.settingItem} onPress={() => openUrl('mailto:info@ahlqatar.com')} activeOpacity={0.7}>
-          <Ionicons name="mail-outline" size={19} color={colors.primary} />
+          <Ionicons name="mail-outline" size={19} color={NAV_ICON_COLOR} />
           <Text style={[styles.menuText, { color: colors.text, fontFamily: 'Inter_500Medium' }]}>تواصل معنا</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.settingItem} onPress={() => openUrl('mailto:ads@ahlqatar.com')} activeOpacity={0.7}>
-          <Ionicons name="megaphone-outline" size={19} color={colors.primary} />
+          <Ionicons name="megaphone-outline" size={19} color={NAV_ICON_COLOR} />
           <Text style={[styles.menuText, { color: colors.text, fontFamily: 'Inter_500Medium' }]}>أعلن معنا</Text>
         </TouchableOpacity>
 
@@ -150,7 +186,6 @@ const styles = StyleSheet.create({
   divider: { height: 1, marginHorizontal: 18, marginVertical: 10 },
   sectionLabel: { fontSize: 11, textAlign: 'right', paddingHorizontal: 20, paddingVertical: 6 },
   menuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 14, paddingVertical: 13, paddingHorizontal: 20, borderRadius: 10, marginHorizontal: 10 },
-  firstItem: { backgroundColor: 'rgba(138,21,56,0.07)' },
   menuText: { fontSize: 14, textAlign: 'right', flex: 1 },
   settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 14, paddingHorizontal: 20, paddingVertical: 8 },
   segment: { flexDirection: 'row', marginHorizontal: 18, borderRadius: 10, padding: 3 },
