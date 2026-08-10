@@ -3,9 +3,13 @@ name: QPN CI
 on:
   workflow_dispatch:
   push:
-    branches: [main, 'qpn/**']
+    branches:
+      - main
+      - 'qpn/**'
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - 'qpn/**'
 
 permissions:
   contents: read
