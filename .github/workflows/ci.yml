@@ -40,7 +40,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Workspace diagnostics
-        run: pnpm -r --if-present exec pwd
+        run: pnpm -r --if-present run pwd
       - name: Typecheck
         run: pnpm typecheck
 
