@@ -8,6 +8,8 @@ import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 
+const UI_ICON_COLOR = '#B9A7E8';
+
 export default function Header() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -20,7 +22,7 @@ export default function Header() {
   useEffect(() => {
     AsyncStorage.getItem('qpn-language').then((value) => {
       if (value === 'en' || value === 'ar') setLanguage(value);
-    });
+    }).catch(() => {});
   }, []);
 
   const handleMenu = () => {
@@ -42,14 +44,14 @@ export default function Header() {
             <Text style={[styles.logoLetter, { color: colors.gold, fontFamily: 'Inter_700Bold' }]}>ق</Text>
           </View>
           <TouchableOpacity style={styles.loginBtn} onPress={() => router.push('/auth')} activeOpacity={0.8}>
-            <Ionicons name="person-outline" size={15} color="#FFFFFF" />
+            <Ionicons name="person-outline" size={15} color={UI_ICON_COLOR} />
             <Text style={[styles.loginText, { fontFamily: 'Inter_600SemiBold' }]}>الدخول</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.languageBtn} onPress={toggleLanguage} activeOpacity={0.8}>
             <Text style={[styles.languageText, { fontFamily: 'Inter_600SemiBold' }]}>العربية / English</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
-            <Ionicons name="search-outline" size={20} color="rgba(255,255,255,0.85)" />
+            <Ionicons name="search-outline" size={20} color={UI_ICON_COLOR} />
           </TouchableOpacity>
         </View>
 
@@ -58,7 +60,7 @@ export default function Header() {
             {language === 'ar' ? 'أخبار أهل قطر' : 'Qatar People News'}
           </Text>
           <TouchableOpacity style={styles.iconBtn} onPress={handleMenu} activeOpacity={0.7}>
-            <Ionicons name="menu" size={24} color="#FFFFFF" />
+            <Ionicons name="menu" size={24} color={UI_ICON_COLOR} />
           </TouchableOpacity>
         </View>
       </View>
