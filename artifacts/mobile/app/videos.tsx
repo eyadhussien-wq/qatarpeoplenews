@@ -5,11 +5,11 @@ import { useColors } from '@/hooks/useColors';
 export default function VideosScreen() {
   const colors = useColors();
   return <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.content}>
-    <Text style={[styles.title, { color: colors.text }]}>الفيديو</Text>
+    <Text style={[styles.title, { color: colors.text }]}>مقاطع فيديو</Text>
     <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>أحدث المقاطع والتغطيات المرئية من أخبار أهل قطر</Text>
     <View style={[styles.empty, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>الفيديو قادم في هذا القسم</Text>
-      <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>سيتم ربطه بمكتبة الفيديو وقنوات YouTube الموجودة لدينا.</Text>
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>المقاطع ستظهر هنا</Text>
+      <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>سيتم ربط هذا القسم بمكتبة الفيديو وقنوات YouTube الموجودة لدينا.</Text>
     </View>
   </ScrollView>;
 }
