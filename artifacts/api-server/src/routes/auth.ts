@@ -1,6 +1,6 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request } from "express";
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { eq, gt } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { db, userSessions, users } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -33,17 +33,17 @@ function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
+function getBearerToken(req: Request) {
+  const header = req.headers.authorization;
+  if (!header?.startsWith("Bearer ")) return null;
+  return header.slice("Bearer ".length).trim() || null;
+}
+
 async function createSession(userId: string) {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
   await db.insert(userSessions).values({ userId, tokenHash: hashToken(token), expiresAt });
   return { token, expiresAt };
-}
-
-function bearerToken(req: Parameters<IRouter["get"]>[1] extends never ? never : any) {
-  const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) return null;
-  return header.slice("Bearer ".length).trim() || null;
 }
 
 router.post("/auth/register", async (req, res) => {
@@ -99,26 +99,31 @@ router.post("/auth/login", async (req, res) => {
 });
 
 router.get("/auth/me", async (req, res) => {
-  const token = bearerToken(req);
+  const token = getBearerToken(req);
   if (!token) {
     res.status(401).json({ message: "غير مسجل الدخول." });
     return;
   }
 
   const session = await db.query.userSessions.findFirst({
-    where: (table, { and, eq, gt }) => and(eq(table.tokenHash, hashToken(token)), gt(table.expiresAt, new Date())),
-    with: { user: true },
+    where: and(eq(userSessions.tokenHash, hashToken(token)), gt(userSessions.expiresAt, new Date())),
   });
-  if (!session?.user) {
+  if (!session) {
     res.status(401).json({ message: "انتهت جلسة الدخول." });
     return;
   }
 
-  res.json({ user: { id: session.user.id, name: session.user.name, email: session.user.email, language: session.user.language } });
+  const user = await db.query.users.findFirst({ where: eq(users.id, session.userId) });
+  if (!user) {
+    res.status(401).json({ message: "الحساب غير موجود." });
+    return;
+  }
+
+  res.json({ user: { id: user.id, name: user.name, email: user.email, language: user.language } });
 });
 
 router.post("/auth/logout", async (req, res) => {
-  const token = bearerToken(req);
+  const token = getBearerToken(req);
   if (token) await db.delete(userSessions).where(eq(userSessions.tokenHash, hashToken(token)));
   res.status(204).send();
 });
