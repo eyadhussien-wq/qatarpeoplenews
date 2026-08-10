@@ -3,13 +3,9 @@ name: QPN CI
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
-      - 'qpn/**'
+    branches: [main, 'qpn/**']
   pull_request:
-    branches:
-      - main
-      - 'qpn/**'
+    branches: [main, 'qpn/**']
 
 permissions:
   contents: read
@@ -63,3 +59,33 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build
         run: pnpm build
+
+  smoke:
+    name: Application smoke checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify critical application files
+        run: |
+          test -f artifacts/api-server/src/lib/news-sync.ts
+          test -f artifacts/api-server/src/routes/news-sync.ts
+          test -f artifacts/api-server/src/routes/admin.ts
+          test -f artifacts/api-server/src/routes/admin-news.ts
+          test -f artifacts/api-server/src/routes/news.ts
+          test -f lib/db/src/schema/news.ts
+          echo "QPN critical News Engine/Admin files are present."
