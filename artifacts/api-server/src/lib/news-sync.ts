@@ -2,14 +2,18 @@ import { db } from "@workspace/db";
 import { news } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
-export type NewsSource = "QNA" | "الشرق" | "العرب";
+export type NewsSource = "QNA" | "الجزيرة" | "الشرق" | "العرب";
 
 type FeedItem = { title: string; link: string; description: string | null; publishedAt: Date | null };
 
 const SOURCES: Array<{ name: NewsSource; urls: string[]; kind: "rss" | "html" }> = [
+  { name: "QNA", urls: ["https://qna.org.qa/ar-QA/"], kind: "html" },
+  // Al Jazeera currently exposes newsletters and other feeds/services publicly,
+  // but no current official general-news RSS endpoint was found. Keep this as
+  // an official-site adapter so it can be enabled when a supported feed is confirmed.
+  { name: "الجزيرة", urls: ["https://www.aljazeera.net/"], kind: "html" },
   { name: "الشرق", urls: ["https://al-sharq.com/rss/latestNews", "https://al-sharq.com/rss"], kind: "rss" },
   { name: "العرب", urls: ["https://alarab.qa/rss/latestNews", "https://alarab.qa/rss"], kind: "rss" },
-  { name: "QNA", urls: ["https://qna.org.qa/ar-QA/"], kind: "html" },
 ];
 
 function decodeHtml(value: string) {
@@ -52,6 +56,22 @@ function parseQnaHtml(html: string): FeedItem[] {
   }
   return results;
 }
+function parseAlJazeeraHtml(html: string): FeedItem[] {
+  const results: FeedItem[] = [];
+  const seen = new Set<string>();
+  const pattern = /href=["']([^"']*\/news\/[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  for (const match of html.matchAll(pattern)) {
+    let link: string;
+    try { link = new URL(match[1], "https://www.aljazeera.net").toString(); } catch { continue; }
+    if (seen.has(link)) continue;
+    const title = decodeHtml(match[2]);
+    if (title.length < 12 || title.length > 300) continue;
+    seen.add(link);
+    results.push({ title, link, description: null, publishedAt: null });
+    if (results.length >= 30) break;
+  }
+  return results;
+}
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 100) || `news-${Date.now()}`;
 }
@@ -73,7 +93,7 @@ export async function syncNewsSources() {
   for (const source of SOURCES) {
     try {
       const { body } = await fetchSource(source.urls);
-      const items = source.kind === "rss" ? parseRss(body) : parseQnaHtml(body);
+      const items = source.kind === "rss" ? parseRss(body) : source.name === "QNA" ? parseQnaHtml(body) : parseAlJazeeraHtml(body);
       let inserted = 0;
       let skipped = 0;
       for (const item of items) {
