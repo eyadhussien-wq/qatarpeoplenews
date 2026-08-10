@@ -6,6 +6,9 @@ import adminRouter from "./admin";
 import adminNewsRouter from "./admin-news";
 import newsRouter from "./news";
 import newsSyncRouter from "./news-sync";
+import communityRouter from "./community";
+import jobsRouter from "./jobs";
+import eventsRouter from "./events";
 
 const router: IRouter = Router();
 
@@ -16,5 +19,8 @@ router.use(adminRouter);
 router.use(adminNewsRouter);
 router.use(newsRouter);
 router.use(newsSyncRouter);
+router.use(communityRouter);
+router.use(jobsRouter);
+router.use(eventsRouter);
 
 export default router;
