@@ -24,6 +24,7 @@ type SourceConfig = {
 const MAX_ITEMS_PER_SOURCE = 50;
 const MIN_TITLE_LENGTH = 8;
 const MAX_TITLE_LENGTH = 320;
+const FETCH_TIMEOUT_MS = 15000;
 
 export const NEWS_SOURCE_CONFIG: SourceConfig[] = [
   { name: "QNA", urls: ["https://qna.org.qa/ar-QA/"], kind: "html", official: true },
@@ -199,7 +200,7 @@ async function fetchSource(urls: string[]) {
           "user-agent": "Mozilla/5.0 (compatible; QatarPeopleNews/1.0)",
           accept: "application/rss+xml, application/atom+xml, application/xml, text/xml, text/html;q=0.9, */*;q=0.8",
         },
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
       if (!response.ok) {
         lastError = `HTTP ${response.status} from ${url}`;
@@ -253,7 +254,7 @@ export async function syncNewsSources() {
           continue;
         }
 
-        await db.insert(news).values({
+        const [created] = await db.insert(news).values({
           title: item.title,
           slug: `${slugify(item.title)}-${Date.now()}-${inserted}`,
           excerpt: item.description,
@@ -264,8 +265,10 @@ export async function syncNewsSources() {
           isBreaking: item.isBreaking,
           publishedAt: item.publishedAt ?? new Date(),
           updatedAt: new Date(),
-        });
-        inserted++;
+        }).onConflictDoNothing({ target: news.sourceUrl }).returning({ id: news.id });
+
+        if (created) inserted++;
+        else skipped++;
       }
 
       summary.push({
